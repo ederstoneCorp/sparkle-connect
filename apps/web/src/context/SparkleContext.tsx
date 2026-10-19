@@ -402,11 +402,12 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
     if (error) return { success: false, error: error.message };
     if (!result.user) return { success: false, error: 'Account creation could not be confirmed. Please try again.' };
+    const createdUser = result.user;
 
     if (result.session) {
       try {
-        const profile = await ensureProfile(result.user);
-        setState((prev) => ({ ...prev, currentUser: profile, currentAccountId: result.user.id, isAuthModalOpen: false }));
+        const profile = await ensureProfile(createdUser);
+        setState((prev) => ({ ...prev, currentUser: profile, currentAccountId: createdUser.id, isAuthModalOpen: false }));
       } catch (profileError) {
         return { success: false, error: profileError instanceof Error ? profileError.message : 'Account created, but profile setup failed.' };
       }
