@@ -32,8 +32,6 @@ export const AuthModal: React.FC = () => {
   const [faculty, setFaculty] = useState('School of Computing & Informatics');
   const [course, setCourse] = useState('BSc Computer Science');
   const [yearOfStudy, setYearOfStudy] = useState(2);
-  const [gmailAddress, setGmailAddress] = useState('');
-  const [gmailName, setGmailName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
