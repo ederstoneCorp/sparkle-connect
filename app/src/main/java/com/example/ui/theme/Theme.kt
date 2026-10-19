@@ -1,11 +1,10 @@
 package com.example.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
@@ -23,9 +22,11 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = SparkleDarkText,
     surface = SparkleDarkSurface,
     onSurface = SparkleDarkText,
-    surfaceVariant = Color(0xFF27243C),
+    surfaceVariant = SparkleDarkSurface2,
     onSurfaceVariant = SparkleDarkSecondaryText,
     outline = SparkleDarkBorder,
+    error = Color(0xFFFF5252),
+    onError = Color.White,
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -46,19 +47,25 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = Color(0xFFF0EFF8),
     onSurfaceVariant = SparkleSecondaryText,
     outline = SparkleBorder,
+    error = Color(0xFFDC2626),
+    onError = Color.White,
 )
+
+// Composition local for in-app dark mode toggle
+val LocalSparkleIsDark = compositionLocalOf { false }
 
 @Composable
 fun SparkleConnectTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    // Keep brand identity vibrant and consistent with Sparkle palette across devices
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content,
-    )
+    CompositionLocalProvider(LocalSparkleIsDark provides darkTheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content,
+        )
+    }
 }

@@ -9,24 +9,35 @@ import {
   Send,
   EyeOff,
   Sparkles,
-  Filter,
   Search,
   Check,
+  ShieldCheck,
+  Lock,
 } from 'lucide-react';
 
 interface FeedScreenProps {
   onOpenCreatePost: () => void;
 }
 
-const CATEGORIES: { label: string; value: PostCategory | 'ALL'; icon?: string }[] = [
+const CATEGORIES: { label: string; value: PostCategory | 'ALL' }[] = [
   { label: '🔥 All Feeds', value: 'ALL' },
   { label: '🎓 Campus Life', value: 'CAMPUS_LIFE' },
   { label: '💻 Tech & Devs', value: 'TECH' },
-  { label: '🤫 Secret Confessions', value: 'ANONYMOUS' },
+  { label: '🤫 Confessions', value: 'ANONYMOUS' },
   { label: '📚 Academics', value: 'ACADEMICS' },
   { label: '💼 Career', value: 'CAREER' },
   { label: '🚀 Hustles', value: 'ENTREPRENEURSHIP' },
 ];
+
+const CATEGORY_COLORS: Partial<Record<PostCategory | 'ALL', string>> = {
+  ANONYMOUS: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+  TECH: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  ACADEMICS: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+  CAREER: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+  CAMPUS_LIFE: 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+  OPPORTUNITIES: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+  ENTREPRENEURSHIP: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800',
+};
 
 export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
   const {
@@ -36,6 +47,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
     addComment,
     selectedUniversityId,
     universities,
+    setIsAuthModalOpen,
   } = useSparkle();
 
   const [activeCategory, setActiveCategory] = useState<PostCategory | 'ALL'>('ALL');
@@ -45,22 +57,14 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
   const [commentAnonMap, setCommentAnonMap] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Filter posts
   const filteredPosts = posts.filter((post) => {
-    // University filter (if not ALL and post is not anonymous)
     if (selectedUniversityId !== 'ALL' && !post.isAnonymous) {
       const selectedUniv = universities.find((u) => u.id === selectedUniversityId);
       if (selectedUniv && !post.authorUniversity.toLowerCase().includes(selectedUniv.shortName.toLowerCase())) {
         return false;
       }
     }
-
-    // Category filter
-    if (activeCategory !== 'ALL' && post.category !== activeCategory) {
-      return false;
-    }
-
-    // Search query
+    if (activeCategory !== 'ALL' && post.category !== activeCategory) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchContent = post.content.toLowerCase().includes(q);
@@ -68,14 +72,18 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
       const matchTags = post.tags ? post.tags.some((t: string) => t.toLowerCase().includes(q)) : false;
       if (!matchContent && !matchAuthor && !matchTags) return false;
     }
-
     return true;
   });
 
+  const handleLikePost = (postId: string) => {
+    if (!currentUser) { setIsAuthModalOpen(true); return; }
+    toggleLikePost(postId);
+  };
+
   const handleSendComment = (postId: string) => {
+    if (!currentUser) { setIsAuthModalOpen(true); return; }
     const text = commentInputs[postId];
     if (!text || !text.trim()) return;
-
     const isAnon = !!commentAnonMap[postId];
     addComment(postId, text.trim(), isAnon);
     setCommentInputs((prev) => ({ ...prev, [postId]: '' }));
@@ -90,7 +98,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
   return (
     <div className="space-y-4">
       {/* Search & Top Action Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-white dark:bg-sparkle-darkSurface rounded-2xl border border-slate-200/80 dark:border-slate-700/60 p-4 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between animate-slide-down">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -98,7 +106,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
             placeholder="Search campus discussions or #tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 font-medium"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 font-medium dark:text-slate-200 dark:placeholder-slate-500"
           />
         </div>
 
@@ -111,8 +119,8 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
         </button>
       </div>
 
-      {/* Category Pills Carousel */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+      {/* Category Pills */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 animate-fade-in">
         {CATEGORIES.map((cat) => {
           const isActive = activeCategory === cat.value;
           return (
@@ -122,7 +130,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
                 isActive
                   ? 'bg-sparkle-purple text-white border-sparkle-purple shadow-xs'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  : 'bg-white dark:bg-sparkle-darkSurface text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
             >
               {cat.label}
@@ -131,13 +139,26 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
         })}
       </div>
 
+      {/* Anonymous Confessions Banner (when filter active) */}
+      {activeCategory === 'ANONYMOUS' && (
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-2xl flex items-start gap-3 animate-fade-in">
+          <Lock className="w-5 h-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-extrabold text-sm">#Anonymous Confessions & Mental Health</p>
+            <p className="text-xs text-white/90 mt-0.5 leading-relaxed">
+              This is a moderated safe space for Kenyan students. Your identity is fully hidden — even from admins at the DB level. Be kind to fellow comrades. 🫂
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Posts Stream */}
       <div className="space-y-4">
         {filteredPosts.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center">
+          <div className="bg-white dark:bg-sparkle-darkSurface rounded-2xl border border-slate-200/80 dark:border-slate-700/60 p-12 text-center">
             <Flame className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <h4 className="font-extrabold text-sm text-slate-800">No campus posts found</h4>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            <h4 className="font-extrabold text-sm text-slate-800 dark:text-slate-200">No campus posts found</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
               Be the first to share an update or switch your university filter.
             </p>
             <button
@@ -148,54 +169,74 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
             </button>
           </div>
         ) : (
-          filteredPosts.map((post) => {
+          filteredPosts.map((post, idx) => {
             const isCommentsOpen = expandedCommentsPostId === post.id;
+            const catColor = CATEGORY_COLORS[post.category] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600';
 
             return (
               <article
                 key={post.id}
-                className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs transition-shadow hover:shadow-md"
+                className={`bg-white dark:bg-sparkle-darkSurface rounded-2xl border border-slate-200/80 dark:border-slate-700/60 p-5 shadow-xs transition-shadow hover:shadow-md animate-stagger-${Math.min(idx + 1, 4) as 1|2|3|4}`}
               >
+                {/* Anonymous confession header */}
+                {post.isAnonymous && (
+                  <div className="flex items-center gap-2 mb-3 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                    <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                      Anonymous Confession — Identity fully protected 🔒
+                    </p>
+                  </div>
+                )}
+
                 {/* Author row */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={post.authorAvatar}
-                      alt={post.authorName}
-                      className="w-10 h-10 rounded-full bg-slate-100 object-cover ring-2 ring-slate-100"
-                    />
+                    {post.isAnonymous ? (
+                      <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                        <EyeOff className="w-5 h-5 text-amber-600" />
+                      </div>
+                    ) : (
+                      <img
+                        src={post.authorAvatar && !['FC','KO','AH','GK','MW','DK','DM','LA','PK','KU'].includes(post.authorAvatar)
+                          ? post.authorAvatar
+                          : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(post.authorName)}`}
+                        alt={post.authorName}
+                        className="w-10 h-10 rounded-full bg-slate-100 object-cover ring-2 ring-slate-100 dark:ring-slate-700"
+                      />
+                    )}
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-sm text-slate-900">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
                           {post.authorName}
                         </span>
-                        {post.isAnonymous ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
-                            <EyeOff className="w-3 h-3" /> Anonymous Confession
+                        {!post.isAnonymous && post.isAuthorVerified && (
+                          <span title="Verified Student" className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                            <ShieldCheck className="w-3 h-3" /> Verified
                           </span>
-                        ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sparkle-purple/10 text-sparkle-purple">
+                        )}
+                        {!post.isAnonymous && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${catColor}`}>
                             {post.authorUniversity}
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-500 font-medium">
-                        {post.authorCourse} • {post.timeAgo}
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                        {!post.isAnonymous && post.authorCourse && `${post.authorCourse} • `}{post.timeAgo}
                       </p>
                     </div>
                   </div>
 
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${catColor}`}>
                     #{post.category.replace('_', ' ')}
                   </span>
                 </div>
 
-                {/* Content body */}
-                <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-normal whitespace-pre-line mb-3">
+                {/* Content */}
+                <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-normal whitespace-pre-line mb-3">
                   {post.content}
                 </p>
 
-                {/* Optional Media */}
+                {/* Media */}
                 {post.mediaUrl && (
                   <div className="mb-3 rounded-xl overflow-hidden max-h-80 bg-slate-100">
                     <img
@@ -210,11 +251,8 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
                 {/* Tags */}
                 {post.tags && post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-4">
-                    {post.tags.map((tag: string, idx: number) => (
-                      <span
-                        key={idx}
-                        className="text-[11px] font-semibold text-sparkle-purple bg-sparkle-purple/5 px-2 py-0.5 rounded-md"
-                      >
+                    {post.tags.map((tag: string, i: number) => (
+                      <span key={i} className="text-[11px] font-semibold text-sparkle-purple bg-sparkle-purple/5 dark:bg-sparkle-purple/10 px-2 py-0.5 rounded-md">
                         #{tag}
                       </span>
                     ))}
@@ -222,114 +260,96 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
                 )}
 
                 {/* Engagement bar */}
-                <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500 font-semibold">
+                <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-700 pt-3 text-xs text-slate-500 dark:text-slate-400 font-semibold">
                   <div className="flex items-center gap-4">
-                    {/* Like button */}
                     <button
-                      onClick={() => toggleLikePost(post.id)}
+                      onClick={() => handleLikePost(post.id)}
                       className={`flex items-center gap-1.5 transition-colors ${
                         (post.isLiked || post.isLikedByMe)
                           ? 'text-rose-600 font-bold'
                           : 'hover:text-rose-500'
                       }`}
                     >
-                      <Heart
-                        className={`w-4 h-4 ${(post.isLiked || post.isLikedByMe) ? 'fill-rose-600 text-rose-600' : ''}`}
-                      />
+                      <Heart className={`w-4 h-4 ${(post.isLiked || post.isLikedByMe) ? 'fill-rose-600 text-rose-600' : ''}`} />
                       <span>{post.likesCount}</span>
                     </button>
 
-                    {/* Comments Toggle */}
                     <button
-                      onClick={() =>
-                        setExpandedCommentsPostId(isCommentsOpen ? null : post.id)
-                      }
+                      onClick={() => setExpandedCommentsPostId(isCommentsOpen ? null : post.id)}
                       className="flex items-center gap-1.5 hover:text-sparkle-purple transition-colors"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      <span>{post.commentsCount} comments</span>
+                      <span>{post.commentsCount || post.comments.length}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleShare(post.id)}
+                      className="flex items-center gap-1.5 hover:text-sparkle-blue transition-colors"
+                    >
+                      {copiedId === post.id ? (
+                        <><Check className="w-4 h-4 text-emerald-500" /><span className="text-emerald-500">Copied!</span></>
+                      ) : (
+                        <><Share2 className="w-4 h-4" /><span>{post.sharesCount || 0}</span></>
+                      )}
                     </button>
                   </div>
-
-                  {/* Share button */}
-                  <button
-                    onClick={() => handleShare(post.id)}
-                    className="flex items-center gap-1 hover:text-slate-800 transition-colors"
-                  >
-                    {copiedId === post.id ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="text-emerald-600 font-bold">Link Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span>Share</span>
-                      </>
-                    )}
-                  </button>
                 </div>
 
-                {/* Collapsible Comments Section */}
+                {/* Comments section */}
                 {isCommentsOpen && (
-                  <div className="mt-4 pt-3 border-t border-slate-100 space-y-3">
-                    {/* List comments */}
-                    <div className="space-y-2.5 max-h-60 overflow-y-auto">
-                      {post.comments.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic">No comments yet. Start the thread!</p>
-                      ) : (
-                        post.comments.map((comment) => (
-                          <div key={comment.id} className="bg-slate-50 p-2.5 rounded-xl text-xs space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-slate-900">
-                                {comment.authorName}
-                              </span>
-                              <span className="text-[10px] text-slate-400">{comment.timeAgo}</span>
-                            </div>
-                            <p className="text-slate-700 font-medium">{comment.content}</p>
+                  <div className="mt-4 space-y-3 border-t border-slate-100 dark:border-slate-700 pt-4">
+                    {post.comments.map((comment) => (
+                      <div key={comment.id} className="flex gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-sparkle-purple/20 to-sparkle-pink/20 flex items-center justify-center text-[10px] font-black text-sparkle-purple shrink-0">
+                          {comment.isAnonymous ? '🔒' : comment.authorName.charAt(0)}
+                        </div>
+                        <div className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                              {comment.authorName}
+                            </span>
+                            <span className="text-[10px] text-slate-400">{comment.timeAgo}</span>
                           </div>
-                        ))
-                      )}
-                    </div>
-
-                    {/* New Comment Input */}
-                    <div className="pt-2">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-[11px] font-bold text-slate-500">
-                          Reply as {commentAnonMap[post.id] ? 'Secret Comrade 🤫' : (currentUser?.displayName || 'Student')}
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCommentAnonMap((prev) => ({ ...prev, [post.id]: !prev[post.id] }))
-                          }
-                          className="text-[11px] font-semibold text-sparkle-purple hover:underline"
-                        >
-                          {commentAnonMap[post.id] ? 'Switch to Real Profile' : 'Switch to Anonymous'}
-                        </button>
+                          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{comment.content}</p>
+                        </div>
                       </div>
+                    ))}
 
-                      <div className="flex items-center gap-2">
+                    {/* Comment Input */}
+                    <div className="flex gap-2.5 items-start">
+                      <div className="w-7 h-7 rounded-full bg-sparkle-purple/10 flex items-center justify-center text-sparkle-purple text-[10px] font-black shrink-0">
+                        {currentUser ? currentUser.displayName.charAt(0) : '?'}
+                      </div>
+                      <div className="flex-1 relative">
                         <input
                           type="text"
-                          placeholder="Write a comment..."
+                          placeholder={post.isAnonymous ? 'Reply anonymously...' : 'Add a comment...'}
                           value={commentInputs[post.id] || ''}
-                          onChange={(e) =>
-                            setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSendComment(post.id);
-                          }}
-                          className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 font-medium"
+                          onChange={(e) => setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSendComment(post.id); }}
+                          className="w-full pl-3 pr-10 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 dark:text-slate-200 dark:placeholder-slate-500"
                         />
                         <button
                           onClick={() => handleSendComment(post.id)}
-                          className="p-2 rounded-xl bg-sparkle-purple text-white hover:bg-sparkle-purple-dark transition-colors"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-sparkle-purple hover:text-sparkle-purple-dark"
                         >
-                          <Send className="w-4 h-4" />
+                          <Send className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
+
+                    {/* Anonymous comment toggle */}
+                    {currentUser && (
+                      <button
+                        onClick={() => setCommentAnonMap((prev) => ({ ...prev, [post.id]: !prev[post.id] }))}
+                        className={`text-[10px] font-bold flex items-center gap-1 transition-colors ${
+                          commentAnonMap[post.id] ? 'text-amber-600' : 'text-slate-400 hover:text-slate-600'
+                        }`}
+                      >
+                        <EyeOff className="w-3 h-3" />
+                        {commentAnonMap[post.id] ? 'Anonymous mode ON' : 'Comment anonymously'}
+                      </button>
+                    )}
                   </div>
                 )}
               </article>

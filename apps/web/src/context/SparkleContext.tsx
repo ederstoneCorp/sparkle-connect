@@ -23,6 +23,7 @@ import {
   INITIAL_CONVERSATIONS,
   INITIAL_NOTIFICATIONS,
 } from '../lib/initialData';
+import { supabase } from '../lib/supabase';
 
 interface SparkleState {
   accounts: RegisteredAccount[];
@@ -35,7 +36,7 @@ interface SparkleState {
   conversations: Conversation[];
   notifications: SparkleNotification[];
   selectedUniversityId: string; // 'ALL' or university ID
-  activeTab: 'feed' | 'gigs' | 'communities' | 'events' | 'messages';
+  activeTab: 'feed' | 'gigs' | 'communities' | 'academics' | 'events' | 'messages';
   isAuthModalOpen: boolean;
   isProfileModalOpen: boolean;
   isNotificationsOpen: boolean;
@@ -44,7 +45,7 @@ interface SparkleState {
 interface SparkleContextType extends SparkleState {
   universities: University[];
   setSelectedUniversityId: (id: string) => void;
-  setActiveTab: (tab: 'feed' | 'gigs' | 'communities' | 'events' | 'messages') => void;
+  setActiveTab: (tab: 'feed' | 'gigs' | 'communities' | 'academics' | 'events' | 'messages') => void;
   setIsAuthModalOpen: (open: boolean) => void;
   setIsProfileModalOpen: (open: boolean) => void;
   setIsNotificationsOpen: (open: boolean) => void;
@@ -161,7 +162,121 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setState((prev) => ({ ...prev, selectedUniversityId: id }));
   };
 
-  const setActiveTab = (tab: 'feed' | 'gigs' | 'communities' | 'events' | 'messages') => {
+  // Supabase session persistence across devices
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const email = session.user.email || '';
+        const existing = state.accounts.find(
+          (acc) => acc.email.toLowerCase() === email.toLowerCase()
+        );
+        if (existing) {
+          setState((prev) => ({
+            ...prev,
+            currentUser: existing.profile,
+            currentAccountId: existing.id,
+            isAuthModalOpen: false,
+          }));
+        }
+      }
+    }).catch(() => {});
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const email = session.user.email || '';
+        const existing = state.accounts.find(
+          (acc) => acc.email.toLowerCase() === email.toLowerCase()
+        );
+        if (existing) {
+          setState((prev) => ({
+            ...prev,
+            currentUser: existing.profile,
+            currentAccountId: existing.id,
+            isAuthModalOpen: false,
+          }));
+        }
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
+
+  // Supabase Realtime subscriptions for live feed updates & messages
+  useEffect(() => {
+    const channel = supabase
+      .channel('sparkle-campus-feed')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts' },
+        (payload) => {
+          if (payload.new) {
+            const p = payload.new as any;
+            const newPost: CampusPost = {
+              id: p.id || `post_${Date.now()}`,
+              authorId: p.author_id || 'peer',
+              authorName: p.author_name || 'Comrade Student',
+              authorAvatar: p.author_avatar || '',
+              authorUniversity: p.university || 'Kenyan University',
+              authorCourse: p.course || '',
+              isAuthorVerified: p.is_verified ?? true,
+              content: p.content || '',
+              category: p.category || 'CAMPUS_LIFE',
+              isAnonymous: p.is_anonymous || false,
+              likesCount: p.likes_count || 0,
+              commentsCount: p.comments_count || 0,
+              isLikedByMe: false,
+              timeAgo: 'Just now',
+              comments: [],
+            };
+            setState((prev) => {
+              if (prev.posts.some((post) => post.id === newPost.id)) return prev;
+              return { ...prev, posts: [newPost, ...prev.posts] };
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          if (payload.new) {
+            const m = payload.new as any;
+            const newMsg: ChatMessage = {
+              id: m.id || `msg_${Date.now()}`,
+              senderId: m.sender_id || '',
+              senderName: m.sender_name || 'Comrade',
+              text: m.content || '',
+              content: m.content || '',
+              timestamp: 'Just now',
+              isFromMe: m.sender_id === state.currentUser?.id,
+            };
+            setState((prev) => ({
+              ...prev,
+              conversations: prev.conversations.map((conv) => {
+                if (conv.id === m.conversation_id) {
+                  return {
+                    ...conv,
+                    lastMessage: m.content || '',
+                    lastMessageTime: 'Just now',
+                    messages: [...conv.messages, newMsg],
+                  };
+                }
+                return conv;
+              }),
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [state.currentUser?.id]);
+
+  const setActiveTab = (tab: 'feed' | 'gigs' | 'communities' | 'academics' | 'events' | 'messages') => {
     setState((prev) => ({ ...prev, activeTab: tab }));
   };
 
@@ -338,6 +453,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const signOut = () => {
+    supabase.auth.signOut().catch(() => {});
     setState((prev) => ({
       ...prev,
       currentUser: null,

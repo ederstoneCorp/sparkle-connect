@@ -7,9 +7,8 @@ import {
   BookOpen,
   Calendar,
   LogOut,
-  Users,
-  Award,
   Sparkles,
+  Mail,
 } from 'lucide-react';
 
 export const ProfileModal: React.FC = () => {
@@ -17,9 +16,6 @@ export const ProfileModal: React.FC = () => {
     isProfileModalOpen,
     setIsProfileModalOpen,
     currentUser,
-    currentAccountId,
-    accounts,
-    switchAccount,
     signOut,
   } = useSparkle();
 
@@ -27,7 +23,7 @@ export const ProfileModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg bg-white dark:bg-sparkle-darkSurface rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Cover & Avatar */}
         <div className="h-28 bg-gradient-to-r from-sparkle-purple via-indigo-600 to-sparkle-pink relative">
@@ -43,13 +39,13 @@ export const ProfileModal: React.FC = () => {
           <div className="flex justify-between items-end -mt-12 mb-4">
             <div className="relative">
               <img
-                src={currentUser.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=sparkle'}
+                src={currentUser.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(currentUser.displayName)}`}
                 alt={currentUser.displayName}
-                className="w-24 h-24 rounded-2xl border-4 border-white shadow-md bg-slate-100 object-cover"
+                className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-800 shadow-md bg-slate-100 object-cover"
               />
               {currentUser.isVerifiedStudent && (
-                <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-xs">
-                  <ShieldCheck className="w-5 h-5 text-sparkle-mint fill-sparkle-mint/20" />
+                <div className="absolute -bottom-1 -right-1 p-1 bg-white dark:bg-slate-800 rounded-full shadow-xs">
+                  <ShieldCheck className="w-5 h-5 text-emerald-500" />
                 </div>
               )}
             </div>
@@ -59,7 +55,7 @@ export const ProfileModal: React.FC = () => {
                 setIsProfileModalOpen(false);
                 signOut();
               }}
-              className="px-3.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs flex items-center gap-1.5 transition-all"
+              className="px-3.5 py-2 rounded-xl border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 font-bold text-xs flex items-center gap-1.5 transition-all"
             >
               <LogOut className="w-4 h-4" />
               <span>Sign Out</span>
@@ -68,26 +64,34 @@ export const ProfileModal: React.FC = () => {
 
           {/* User Bio & Meta */}
           <div className="space-y-1 mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-xl font-black text-slate-900">{currentUser.displayName}</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xl font-black text-slate-900 dark:text-slate-100">{currentUser.displayName}</h3>
               <span className="text-xs px-2 py-0.5 rounded-full bg-sparkle-purple/10 text-sparkle-purple font-bold">
                 @{currentUser.username}
               </span>
+              {currentUser.isVerifiedStudent && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" /> Verified Student
+                </span>
+              )}
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">{currentUser.bio}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">{currentUser.bio}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-500 flex items-center gap-1">
+              <Mail className="w-3 h-3" />{currentUser.email}
+            </p>
           </div>
 
           {/* University Details Card */}
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 mb-4">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 space-y-2 mb-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
               <Building className="w-4 h-4 text-sparkle-purple" />
               <span>{currentUser.university.name} ({currentUser.university.shortName})</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-600">
+            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
               <BookOpen className="w-4 h-4 text-sparkle-orange" />
               <span>{currentUser.course} • Year {currentUser.yearOfStudy}</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-500">
               <Calendar className="w-4 h-4 text-slate-400" />
               <span>Joined {currentUser.joinedDate}</span>
             </div>
@@ -103,7 +107,7 @@ export const ProfileModal: React.FC = () => {
                 {currentUser.skills.map((skill, idx) => (
                   <span
                     key={idx}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200"
+                    className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800"
                   >
                     {skill}
                   </span>
@@ -119,7 +123,7 @@ export const ProfileModal: React.FC = () => {
                 {currentUser.interests.map((interest, idx) => (
                   <span
                     key={idx}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200"
+                    className="text-xs px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
                   >
                     {interest}
                   </span>
@@ -128,52 +132,12 @@ export const ProfileModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Switch Recorded Accounts */}
-          <div className="border-t border-slate-200 pt-3">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Switch Student Account (Saved in DB)
-            </p>
-            <div className="space-y-1.5 max-h-36 overflow-y-auto">
-              {accounts.map((acc) => {
-                const isSelected = acc.id === currentAccountId;
-                return (
-                  <button
-                    key={acc.id}
-                    onClick={() => switchAccount(acc.id)}
-                    className={`w-full flex items-center justify-between p-2 rounded-xl text-left border transition-all ${
-                      isSelected
-                        ? 'border-sparkle-purple bg-sparkle-purple/5 font-bold'
-                        : 'border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={acc.profile.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=sparkle'}
-                        alt=""
-                        className="w-6 h-6 rounded-full bg-slate-200 object-cover"
-                      />
-                      <div>
-                        <p className="text-xs font-bold text-slate-800 leading-none">
-                          {acc.profile.displayName}
-                        </p>
-                        <p className="text-[10px] text-slate-500 leading-tight">
-                          {acc.email} • {acc.profile.university.shortName}
-                        </p>
-                      </div>
-                    </div>
-                    {isSelected && (
-                      <span className="text-[10px] font-bold text-sparkle-purple px-2 py-0.5 rounded-full bg-sparkle-purple/10">
-                        Active
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          {/* Platform Stats Footer */}
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-3 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+            <Sparkles className="w-3.5 h-3.5 text-sparkle-purple" />
+            <span>Sparkle Connect • Kenyan Campus Network 🇰🇪</span>
           </div>
-
         </div>
-
       </div>
     </div>
   );

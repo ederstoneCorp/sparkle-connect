@@ -21,8 +21,12 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
@@ -34,6 +38,8 @@
             'sparkle-pink':        '#F43F8C',
             'sparkle-mint':        '#28D7A0',
             'sparkle-blue':        '#2878FF',
+            'sparkle-darkBg':      '#11101B',
+            'sparkle-darkSurface': '#1C1A2A',
           },
         },
       },
@@ -41,7 +47,14 @@
   </script>
 
   <style>
-    body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #F8F9FD; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #F8F9FD; -webkit-font-smoothing: antialiased; transition: background-color 0.3s ease, color 0.3s ease; }
+    html.dark body { background: #11101B; color: #E8E6F0; }
+    html.dark .bg-white { background-color: #1C1A2A !important; }
+    html.dark .border-slate-200, html.dark .border-slate-100 { border-color: #2E2B45 !important; }
+    html.dark .text-slate-900, html.dark .text-slate-800 { color: #E8E6F0 !important; }
+    html.dark .text-slate-700, html.dark .text-slate-600 { color: #9895B5 !important; }
+    html.dark .bg-slate-50, html.dark .bg-slate-100 { background-color: #242236 !important; }
+    html.dark input, html.dark select, html.dark textarea { background-color: #242236 !important; color: #E8E6F0 !important; border-color: #2E2B45 !important; }
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
@@ -109,24 +122,37 @@
         </div>
       </div>
 
-      <!-- Right: Notifications + Profile -->
+      <!-- Right: Theme + Notifications + Auth / Profile -->
       <div class="flex items-center gap-2">
-        <button onclick="toggleNotifications()" class="relative p-2 text-slate-600 hover:text-sparkle-purple hover:bg-slate-100 rounded-xl transition-colors">
+        <button onclick="toggleTheme()" id="theme-btn" aria-label="Toggle Theme" class="p-2 text-slate-600 dark:text-slate-300 hover:text-sparkle-purple hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+          <i data-lucide="moon" id="theme-icon" class="w-5 h-5"></i>
+        </button>
+
+        <button onclick="toggleNotifications()" class="relative p-2 text-slate-600 dark:text-slate-300 hover:text-sparkle-purple hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
           <i data-lucide="bell" class="w-5 h-5"></i>
           <span id="notif-badge" class="hidden absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-sparkle-orange text-white text-[10px] font-black flex items-center justify-center">2</span>
         </button>
 
-        <button id="auth-btn" onclick="openAuth()" class="hidden px-4 py-2 rounded-xl text-xs font-bold text-white bg-sparkle-purple hover:bg-sparkle-purple-dark flex items-center gap-1.5 transition-all">
+        <!-- STRICT CONDITIONAL AUTH: Exactly one of auth-btn OR profile-wrap is ever displayed -->
+        <button id="auth-btn" onclick="openAuth()" style="display: none;" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-sparkle-purple hover:bg-sparkle-purple-dark flex items-center gap-1.5 transition-all shadow-sm">
           <i data-lucide="log-in" class="w-4 h-4"></i> Sign In
         </button>
 
-        <button id="profile-btn" onclick="openProfile()" class="hidden items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-100 border border-slate-200 transition-all">
-          <div id="nav-avatar" class="w-7 h-7 rounded-full bg-gradient-to-tr from-sparkle-purple to-sparkle-pink flex items-center justify-center text-white text-xs font-black">?</div>
-          <div class="hidden lg:block text-left">
-            <p id="nav-name" class="text-xs font-bold text-slate-800 leading-none truncate max-w-[100px]">—</p>
-            <p id="nav-univ" class="text-[10px] text-sparkle-purple font-medium">—</p>
-          </div>
-        </button>
+        <div id="profile-wrap" style="display: none;" class="items-center gap-1.5">
+          <button id="profile-btn" onclick="openProfile()" class="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-all">
+            <div id="nav-avatar" class="w-7 h-7 rounded-full bg-gradient-to-tr from-sparkle-purple to-sparkle-pink flex items-center justify-center text-white text-xs font-black">?</div>
+            <div class="hidden lg:block text-left">
+              <p id="nav-name" class="text-xs font-bold text-slate-800 dark:text-slate-200 leading-none truncate max-w-[100px]">—</p>
+              <p id="nav-univ" class="text-[10px] text-sparkle-purple font-medium flex items-center gap-1">
+                <span id="nav-univ-txt">—</span>
+                <span id="nav-verified-badge" class="hidden text-emerald-500 font-bold" title="Verified Comrade">✓</span>
+              </p>
+            </div>
+          </button>
+          <button onclick="doSignOut()" title="Sign Out" aria-label="Sign Out" class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
       </div>
     </div>
   </header>
@@ -806,6 +832,32 @@ function loginAs(acc) {
   updateNavProfile();
 }
 
+function initTheme() {
+  const saved = localStorage.getItem('sparkle_theme');
+  const isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+  updateThemeIcon();
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('sparkle_theme', isDark ? 'dark' : 'light');
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const icon = document.getElementById('theme-icon');
+  if (icon) {
+    const isDark = document.documentElement.classList.contains('dark');
+    icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+    lucide.createIcons();
+  }
+}
+
 function doSignOut() {
   state.currentUser = null;
   saveState();
@@ -816,19 +868,24 @@ function doSignOut() {
 function updateNavProfile() {
   const u = state.currentUser;
   const authBtn = document.getElementById('auth-btn');
-  const profBtn = document.getElementById('profile-btn');
+  const profWrap = document.getElementById('profile-wrap');
+  if (!authBtn || !profWrap) return;
   if (u) {
+    authBtn.style.display = 'none';
     authBtn.classList.add('hidden');
-    profBtn.classList.remove('hidden');
-    profBtn.style.display = 'flex';
+    profWrap.style.display = 'flex';
+    profWrap.classList.remove('hidden');
     document.getElementById('nav-avatar').textContent = initials(u.displayName);
     document.getElementById('nav-name').textContent = u.displayName;
-    document.getElementById('nav-univ').textContent = u.university || 'Student';
+    const univTxt = document.getElementById('nav-univ-txt');
+    if (univTxt) univTxt.textContent = u.university || 'Student';
+    const vBadge = document.getElementById('nav-verified-badge');
+    if (vBadge) vBadge.classList.toggle('hidden', !u.isVerifiedStudent);
   } else {
-    authBtn.classList.remove('hidden');
     authBtn.style.display = 'flex';
-    profBtn.classList.add('hidden');
-    profBtn.style.display = 'none';
+    authBtn.classList.remove('hidden');
+    profWrap.style.display = 'none';
+    profWrap.classList.add('hidden');
   }
 }
 
@@ -1008,16 +1065,21 @@ function renderGigs() {
 }
 
 function gigCard(g) {
-  const skills = (g.skillsRequired||[]).map(s=>`<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">${s}</span>`).join('');
+  const skills = (g.skillsRequired||[]).map(s=>`<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">${s}</span>`).join('');
   const applied = g.hasApplied || g.isApplied;
+  const isEscrow = g.isPaid !== false;
+  const budget = g.budgetKes ? `KES ${Number(g.budgetKes).toLocaleString()}` : (g.compensation || 'KES 2,500');
   const applyBtn = applied
     ? `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i> Applied</span>`
     : `<button onclick="openApplyGig('${g.id}')" class="px-3.5 py-1.5 rounded-xl bg-sparkle-purple hover:bg-sparkle-purple-dark text-white font-black text-xs flex items-center gap-1 transition-all shadow-sm"><i data-lucide="send" class="w-3 h-3"></i> Apply Now</button>`;
   return `
   <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
     <div>
-      <div class="flex items-center justify-between gap-2 mb-3">
-        <span class="text-xs font-black px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">${g.compensation||'—'}</span>
+      <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-xs font-black px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">${budget}</span>
+          ${isEscrow ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200"><i data-lucide="shield-check" class="w-3 h-3 text-emerald-600"></i> M-Pesa Escrow</span>` : ''}
+        </div>
         <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold"><i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i> ${g.deadline||''}</div>
       </div>
       <h3 class="font-black text-sm text-slate-900 mb-2 leading-snug">${escHtml(g.title)}</h3>
@@ -1027,7 +1089,10 @@ function gigCard(g) {
     <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
       <div class="flex items-center gap-2">
         <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-sparkle-purple/30 to-sparkle-pink/30 flex items-center justify-center text-sparkle-purple font-black text-xs">${(g.publisherAvatar||g.publisherName||'?').slice(0,2).toUpperCase()}</div>
-        <div><p class="text-xs font-bold text-slate-800 truncate max-w-[120px]">${g.publisherName||''}</p><p class="text-[10px] text-slate-500">${g.publisherUniversity||''}</p></div>
+        <div>
+          <p class="text-xs font-bold text-slate-800 truncate max-w-[120px] flex items-center gap-1">${g.publisherName||''} <i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-500 inline"></i></p>
+          <p class="text-[10px] text-slate-500">${g.publisherUniversity||''}</p>
+        </div>
       </div>
       ${applyBtn}
     </div>
@@ -1402,15 +1467,50 @@ function emptyState(icon, title, sub) {
 
 // ─── BOOT ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   lucide.createIcons();
   updateNavProfile();
   renderPosts();
   updateMsgBadge();
+  initSupabaseSync();
   // Show auth modal if no current user
   if (!state.currentUser) {
     setTimeout(() => openAuth(), 600);
   }
 });
+
+function initSupabaseSync() {
+  try {
+    if (window.supabase) {
+      const client = window.supabase.createClient('https://kdzoswwyydfflrngqbof.supabase.co', 'sb_publishable_e0vQEelRbAiDYdhgILpZnA_z7L856xz');
+      client.channel('live-site-feed')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, payload => {
+          if (payload.new) {
+            const p = payload.new;
+            state.posts.unshift({
+              id: p.id || 'p_' + Date.now(),
+              authorId: p.author_id || 'peer',
+              authorName: p.author_name || 'Comrade',
+              authorAvatar: 'CR',
+              authorUniversity: p.university || 'Kenyan University',
+              authorCourse: p.course || '',
+              content: p.content || '',
+              category: p.category || 'CAMPUS_LIFE',
+              isAnonymous: p.is_anonymous || false,
+              likesCount: 0,
+              commentsCount: 0,
+              timeAgo: 'Just now',
+              comments: [],
+            });
+            renderPosts();
+          }
+        })
+        .subscribe();
+    }
+  } catch (e) {
+    console.log('Supabase sync initialized in offline fallback mode.');
+  }
+}
 </script>
 </body>
 </html>

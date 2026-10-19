@@ -20,6 +20,13 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode body */
+.dark body {
+  background-color: #11101B;
+  color: #E8E6F0;
 }
 
 /* Custom scrollbars */
@@ -37,6 +44,10 @@ body {
   border-radius: 9999px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #3D3B50;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
@@ -48,4 +59,16 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Smooth color transitions across all elements for theme switching */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* But not for animations that already have transitions */
+.animate-bounce, .animate-pulse, .animate-spin {
+  transition: none !important;
 }

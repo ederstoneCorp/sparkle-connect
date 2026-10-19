@@ -5,12 +5,16 @@
 .idea/
 /.idea/
 .DS_Store
-/build
+build/
+**/build/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
 .env
+.env.*
+.env.local
+!.env.example
 debug.keystore
 
 # Node & Web
