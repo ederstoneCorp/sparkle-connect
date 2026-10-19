@@ -54,18 +54,10 @@ export const AuthModal: React.FC = () => {
   const handleGmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!gmailAddress.trim()) {
-      setError('Please provide your Gmail address');
-      return;
-    }
     setIsLoading(true);
-    const res = await signInWithGmail(gmailAddress, gmailName);
+    const res = await signInWithGmail('', '');
     setIsLoading(false);
-    if (!res.success) {
-      setError(res.error || 'Failed to authenticate with Gmail');
-    } else {
-      setSuccessMsg(`Welcome, ${res.account?.profile.displayName}! Saved to database.`);
-    }
+    if (!res.success) setError(res.error || 'Could not start Google sign-in.');
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -118,7 +110,7 @@ export const AuthModal: React.FC = () => {
 
           <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-semibold text-white backdrop-blur-xs">
             <Database className="w-3.5 h-3.5 text-sparkle-mint" />
-            <span>Database Synced (Room / Local / Supabase)</span>
+            <span>Secure account access</span>
           </div>
         </div>
 
@@ -135,7 +127,7 @@ export const AuthModal: React.FC = () => {
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            Gmail Instant Login
+            Continue with Google
           </button>
           <button
             onClick={() => {
@@ -181,65 +173,21 @@ export const AuthModal: React.FC = () => {
             </div>
           )}
 
-          {/* GMAIL INSTANT LOGIN */}
+          {/* GOOGLE OAUTH */}
           {mode === 'gmail' && (
             <div className="space-y-4">
               <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-slate-700 text-xs leading-relaxed">
-                <span className="font-bold text-indigo-900">✨ Zero Password Friction:</span> Enter your Gmail address. Sparkle Connect automatically fetches your student name, generates a safe token, and saves your profile straight to the database.
+                <span className="font-bold text-indigo-900">Google sign-in:</span> Continue through Google's secure sign-in page. Typing an email address alone does not authenticate an account.
               </div>
-
-              <form onSubmit={handleGmailSignIn} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Your Gmail Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="email"
-                      required
-                      placeholder="e.g. holdstonez@gmail.com"
-                      value={gmailAddress}
-                      onChange={(e) => setGmailAddress(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 font-medium"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Display Name (Optional - auto-derived if blank)
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="e.g. Holdstone Z."
-                      value={gmailName}
-                      onChange={(e) => setGmailName(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 font-medium"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-sparkle-purple to-sparkle-pink hover:opacity-95 text-white font-extrabold text-xs shadow-md shadow-sparkle-purple/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <span>Authenticating with Gmail...</span>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>Log in with Gmail (Auto-Save to DB)</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </form>
-
-
+              <button
+                type="button"
+                onClick={handleGmailSignIn}
+                disabled={isLoading}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-sparkle-purple to-sparkle-pink hover:opacity-95 text-white font-extrabold text-xs shadow-md shadow-sparkle-purple/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              >
+                {isLoading ? 'Opening Google sign-in...' : 'Continue with Google'}
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           )}
 
@@ -305,7 +253,7 @@ export const AuthModal: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Campus Email</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
