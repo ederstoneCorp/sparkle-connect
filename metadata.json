@@ -1,0 +1,6 @@
+{
+  "name": "Sparkle Connect",
+  "description": "Campus communication, community building, and student gig discovery platform for university students across Kenya.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

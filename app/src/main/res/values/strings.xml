@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Sparkle Connect</string>
+    <string name="default_web_client_id" translatable="false"></string>
+    <string name="firestore_database_id" translatable="false">(default)</string>
+</resources>
