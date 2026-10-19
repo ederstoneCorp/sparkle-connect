@@ -10,9 +10,11 @@ plugins {
 
 android {
   namespace = "com.example"
-  compileSdk { version = release(36) { minorApiLevel = 1 } }
+    compileSdk {
+        version = release(37)
+    }
 
-  defaultConfig {
+    defaultConfig {
     applicationId = "com.aistudio.sparkleconnect.ke"
     minSdk = 24
     targetSdk = 36
@@ -33,7 +35,9 @@ android {
       keyPassword = System.getenv("KEY_PASSWORD")
     }
     create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
+      val localKeystore = file("${rootDir}/debug.keystore")
+      val userHomeKeystore = file("${System.getProperty("user.home")}/.android/debug.keystore")
+      storeFile = if (localKeystore.exists()) localKeystore else userHomeKeystore
       storePassword = "android"
       keyAlias = "androiddebugkey"
       keyPassword = "android"

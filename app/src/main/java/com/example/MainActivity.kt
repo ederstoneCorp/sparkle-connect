@@ -107,11 +107,12 @@ class MainActivity : ComponentActivity() {
                                 if (result.isSuccess && result.getOrNull() != null) {
                                     val gUser = result.getOrNull()!!
                                     val gEmail = gUser.email ?: ""
-                                    val signInRes = viewModel.signInWithGoogleAccount(gEmail)
+                                    val gName = gUser.displayName ?: ""
+                                    val signInRes = viewModel.signInWithGoogleAccount(gEmail, gName)
                                     if (signInRes.isFailure) {
                                         snackbarHostState.showSnackbar(
                                             signInRes.exceptionOrNull()?.message
-                                                ?: "Google account not recorded in database. Please sign up."
+                                                ?: "Failed to log in with Google account."
                                         )
                                     }
                                 }

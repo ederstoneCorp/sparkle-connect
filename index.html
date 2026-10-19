@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Sparkle Connect | Kenya Campus Network &amp; Student Gig Hub 🇰🇪</title>
+  <meta name="description" content="Sparkle Connect — Kenyan university campus social network and student freelance gig marketplace. UoN, KU, Strathmore, JKUAT, Moi and more." />
+  <meta name="theme-color" content="#6C3BFF" />
+  <meta property="og:title" content="Sparkle Connect 🇰🇪" />
+  <meta property="og:description" content="Campus network for Kenyan university students — feeds, gigs, communities, events and direct messages." />
+  <meta property="og:type" content="website" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
+          colors: {
+            'sparkle-purple':      '#6C3BFF',
+            'sparkle-purple-dark': '#5022D9',
+            'sparkle-purple-light':'#9B6FFF',
+            'sparkle-orange':      '#FF6B35',
+            'sparkle-pink':        '#F43F8C',
+            'sparkle-mint':        '#28D7A0',
+            'sparkle-blue':        '#2878FF',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #F8F9FD; -webkit-font-smoothing: antialiased; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
+    .no-scroll { overflow: hidden; }
+    .fade-in { animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity:0; transform: scale(0.97); } to { opacity:1; transform: scale(1); } }
+    .slide-right { animation: slideRight 0.2s ease; }
+    @keyframes slideRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    .tab-active { background: #6C3BFF; color: white; }
+    .cat-pill.active { background: #6C3BFF; color: white; border-color: #6C3BFF; }
+    .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+    .animate-pulse { animation: pulse 2s cubic-bezier(.4,0,.6,1) infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.5} }
+    @media (max-width: 767px) { .desktop-only { display: none !important; } }
+    @media (min-width: 768px) { .mobile-only { display: none !important; } }
+    #bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0); }
+  </style>
+</head>
+<body class="min-h-screen text-slate-900">
+
+<!-- ============================================================
+     APP ROOT
+============================================================ -->
+<div id="app">
+
+  <!-- TOP NAVBAR -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sparkle-purple to-sparkle-pink flex items-center justify-center text-white shadow-md">
+          <i data-lucide="sparkles" class="w-5 h-5 animate-pulse"></i>
+        </div>
+        <div class="hidden sm:block">
+          <div class="flex items-center gap-2">
+            <span class="font-black text-xl tracking-tight" style="background:linear-gradient(90deg,#6C3BFF,#9B6FFF,#F43F8C);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Sparkle Connect</span>
+            <span class="text-xs px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">🇰🇪 KE</span>
+          </div>
+          <p class="text-[11px] text-slate-500 font-medium -mt-0.5">Kenyan University Campus Network &amp; Gigs</p>
+        </div>
+      </div>
+
+      <!-- University Selector -->
+      <div class="flex-1 max-w-xs hidden md:block">
+        <div class="relative">
+          <i data-lucide="graduation-cap" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <select id="univ-filter" onchange="filterByUniversity(this.value)"
+            class="w-full pl-9 pr-8 py-2 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400/30 appearance-none cursor-pointer">
+            <option value="ALL">All Kenyan Campuses</option>
+            <option value="UoN">University of Nairobi (UoN)</option>
+            <option value="KU">Kenyatta University (KU)</option>
+            <option value="Strathmore">Strathmore University</option>
+            <option value="JKUAT">JKUAT — Juja</option>
+            <option value="Moi">Moi University — Eldoret</option>
+            <option value="Egerton">Egerton University — Nakuru</option>
+            <option value="USIU">USIU-Africa — Roysambu</option>
+            <option value="MKU">Mount Kenya University</option>
+            <option value="TUK">Technical University of Kenya</option>
+            <option value="Daystar">Daystar University</option>
+            <option value="Maseno">Maseno University — Kisumu</option>
+          </select>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        </div>
+      </div>
+
+      <!-- Right: Notifications + Profile -->
+      <div class="flex items-center gap-2">
+        <button onclick="toggleNotifications()" class="relative p-2 text-slate-600 hover:text-sparkle-purple hover:bg-slate-100 rounded-xl transition-colors">
+          <i data-lucide="bell" class="w-5 h-5"></i>
+          <span id="notif-badge" class="hidden absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-sparkle-orange text-white text-[10px] font-black flex items-center justify-center">2</span>
+        </button>
+
+        <button id="auth-btn" onclick="openAuth()" class="hidden px-4 py-2 rounded-xl text-xs font-bold text-white bg-sparkle-purple hover:bg-sparkle-purple-dark flex items-center gap-1.5 transition-all">
+          <i data-lucide="log-in" class="w-4 h-4"></i> Sign In
+        </button>
+
+        <button id="profile-btn" onclick="openProfile()" class="hidden items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-100 border border-slate-200 transition-all">
+          <div id="nav-avatar" class="w-7 h-7 rounded-full bg-gradient-to-tr from-sparkle-purple to-sparkle-pink flex items-center justify-center text-white text-xs font-black">?</div>
+          <div class="hidden lg:block text-left">
+            <p id="nav-name" class="text-xs font-bold text-slate-800 leading-none truncate max-w-[100px]">—</p>
+            <p id="nav-univ" class="text-[10px] text-sparkle-purple font-medium">—</p>
+          </div>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24 md:pb-10 flex gap-6 items-start">
+
+    <!-- DESKTOP SIDEBAR -->
+    <aside class="w-64 shrink-0 hidden md:flex flex-col gap-5 sticky top-20 self-start">
+      <nav class="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm space-y-1">
+        <button onclick="setTab('feed')" id="nav-feed" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-sm text-left tab-active transition-all">
+          <i data-lucide="flame" class="w-5 h-5"></i>
+          <div><span class="block text-sm font-bold leading-tight">Campus Feed</span><span class="block text-[11px] leading-tight opacity-70">Trending news &amp; confessions</span></div>
+        </button>
+        <button onclick="setTab('gigs')" id="nav-gigs" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-slate-600 hover:bg-slate-100 text-left transition-all">
+          <i data-lucide="briefcase" class="w-5 h-5 text-slate-400"></i>
+          <div><span class="block text-sm font-bold leading-tight">Student Gigs</span><span class="block text-[11px] leading-tight text-slate-400">Earn KES freelancing</span></div>
+          <span class="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">KES Earn</span>
+        </button>
+        <button onclick="setTab('communities')" id="nav-communities" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-slate-600 hover:bg-slate-100 text-left transition-all">
+          <i data-lucide="users" class="w-5 h-5 text-slate-400"></i>
+          <div><span class="block text-sm font-bold leading-tight">Communities</span><span class="block text-[11px] leading-tight text-slate-400">Campus clubs &amp; circles</span></div>
+        </button>
+        <button onclick="setTab('events')" id="nav-events" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-slate-600 hover:bg-slate-100 text-left transition-all">
+          <i data-lucide="calendar" class="w-5 h-5 text-slate-400"></i>
+          <div><span class="block text-sm font-bold leading-tight">Events &amp; Meetups</span><span class="block text-[11px] leading-tight text-slate-400">Hackathons &amp; summits</span></div>
+        </button>
+        <button onclick="setTab('messages')" id="nav-messages" class="nav-btn w-full flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl font-medium text-slate-600 hover:bg-slate-100 text-left transition-all">
+          <div class="flex items-center gap-3">
+            <i data-lucide="message-square" class="w-5 h-5 text-slate-400"></i>
+            <div><span class="block text-sm font-bold leading-tight">Messages</span><span class="block text-[11px] leading-tight text-slate-400">Direct comrade chats</span></div>
+          </div>
+          <span id="msg-badge-sidebar" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-sparkle-purple text-white">1</span>
+        </button>
+      </nav>
+
+      <!-- Quick Actions -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-2.5">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Quick Actions</h4>
+        <button onclick="openCreatePost()" class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-sparkle-purple to-sparkle-purple-dark text-white font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-all">
+          <i data-lucide="flame" class="w-4 h-4"></i> New Campus Post
+        </button>
+        <button onclick="openCreateGig()" class="w-full py-2.5 px-3 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold text-xs flex items-center justify-center gap-2 transition-all">
+          <i data-lucide="briefcase" class="w-4 h-4"></i> Post a Student Gig
+        </button>
+      </div>
+
+      <!-- Network Badge -->
+      <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-4 relative overflow-hidden">
+        <div class="text-sparkle-mint text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 mb-1">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> Verified Network
+        </div>
+        <h5 class="font-black text-sm mb-1">All Kenyan Universities</h5>
+        <p class="text-xs text-slate-300 leading-relaxed mb-2">Join verified peers across UoN, KU, Strathmore, JKUAT, Egerton and more.</p>
+        <div class="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-700/60 pt-2.5">
+          <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-sparkle-orange"></i> Kenya Hub</span>
+          <span class="font-mono text-sparkle-mint">100% Student-First</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER CONTENT -->
+    <main class="flex-1 min-w-0">
+
+      <!-- FEED SCREEN -->
+      <div id="screen-feed" class="space-y-4">
+        <!-- Feed top bar -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div class="relative w-full sm:w-80">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input id="feed-search" type="text" placeholder="Search campus discussions or #tags..." oninput="renderPosts()" class="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+          </div>
+          <button onclick="openCreatePost()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-sparkle-purple text-white font-black text-xs flex items-center justify-center gap-2 hover:bg-sparkle-purple-dark transition-all">
+            <i data-lucide="sparkles" class="w-4 h-4"></i> What's on your mind?
+          </button>
+        </div>
+
+        <!-- Category Pills -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1" style="scrollbar-width:none">
+          <button onclick="setFeedCat('ALL')" id="cat-ALL" class="cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border border-sparkle-purple transition-all">🔥 All Feeds</button>
+          <button onclick="setFeedCat('CAMPUS_LIFE')" id="cat-CAMPUS_LIFE" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">🎓 Campus Life</button>
+          <button onclick="setFeedCat('TECH')" id="cat-TECH" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">💻 Tech &amp; Devs</button>
+          <button onclick="setFeedCat('ANONYMOUS')" id="cat-ANONYMOUS" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">🤫 Confessions</button>
+          <button onclick="setFeedCat('ACADEMICS')" id="cat-ACADEMICS" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">📚 Academics</button>
+          <button onclick="setFeedCat('CAREER')" id="cat-CAREER" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">💼 Career</button>
+          <button onclick="setFeedCat('ENTREPRENEURSHIP')" id="cat-ENTREPRENEURSHIP" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">🚀 Hustles</button>
+        </div>
+
+        <!-- Posts Container -->
+        <div id="posts-container" class="space-y-4"></div>
+      </div>
+
+      <!-- GIGS SCREEN -->
+      <div id="screen-gigs" class="hidden space-y-4">
+        <div class="bg-gradient-to-r from-emerald-600 via-teal-600 to-sparkle-purple p-6 rounded-3xl text-white relative overflow-hidden">
+          <div class="relative z-10">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-bold mb-2">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-sparkle-mint"></i> Campus Gig Marketplace • M-Pesa Ready
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black tracking-tight">Earn KES while studying at Kenyan Universities</h2>
+            <p class="text-xs text-white/90 mt-1">Find peer-to-peer coding, design, academic writing, and event gigs.</p>
+          </div>
+          <button onclick="openCreateGig()" class="mt-4 px-4 py-2.5 rounded-xl bg-white text-emerald-800 font-black text-xs flex items-center gap-1.5 hover:bg-emerald-50 transition-all">
+            <i data-lucide="plus" class="w-4 h-4 text-emerald-700"></i> Post a Student Gig
+          </button>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div class="relative w-full sm:w-80">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input id="gig-search" type="text" placeholder="Search gigs by keyword or skill..." oninput="renderGigs()" class="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 font-medium" />
+          </div>
+          <div class="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1" style="scrollbar-width:none">
+            <button onclick="setGigCat('ALL')" id="gcat-ALL" class="cat-pill active px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border border-sparkle-purple transition-all">All Gigs</button>
+            <button onclick="setGigCat('Mobile')" id="gcat-Mobile" class="cat-pill px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white border border-slate-200 text-slate-600 transition-all">💻 App Dev</button>
+            <button onclick="setGigCat('Graphic')" id="gcat-Graphic" class="cat-pill px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white border border-slate-200 text-slate-600 transition-all">🎨 Design</button>
+            <button onclick="setGigCat('Academic')" id="gcat-Academic" class="cat-pill px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white border border-slate-200 text-slate-600 transition-all">✍️ Writing</button>
+            <button onclick="setGigCat('Tutor')" id="gcat-Tutor" class="cat-pill px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white border border-slate-200 text-slate-600 transition-all">📖 Tutoring</button>
+          </div>
+        </div>
+        <div id="gigs-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- COMMUNITIES SCREEN -->
+      <div id="screen-communities" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div>
+            <h2 class="text-base font-black text-slate-900">Campus Clubs &amp; Hubs</h2>
+            <p class="text-xs text-slate-500">Connect with student innovators, debate circles, and tech clubs</p>
+          </div>
+          <div class="relative w-full sm:w-72">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input id="comm-search" type="text" placeholder="Search clubs or societies..." oninput="renderCommunities()" class="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+          </div>
+        </div>
+        <div id="communities-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- EVENTS SCREEN -->
+      <div id="screen-events" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div>
+            <h2 class="text-base font-black text-slate-900">Campus Events &amp; Hackathons</h2>
+            <p class="text-xs text-slate-500">Upcoming tech summits, student competitions, and career fairs in Kenya</p>
+          </div>
+          <div class="relative w-full sm:w-72">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input id="evt-search" type="text" placeholder="Search events, venues..." oninput="renderEvents()" class="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+          </div>
+        </div>
+        <div id="events-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- MESSAGES SCREEN -->
+      <div id="screen-messages" class="hidden bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden" style="height: calc(100vh - 140px); min-height: 500px; display: none; flex-direction: row;">
+        <!-- Convo List -->
+        <div id="conv-list-pane" class="w-full md:w-80 border-r border-slate-200 flex flex-col">
+          <div class="p-4 border-b border-slate-100 space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="font-black text-sm">Direct Messages</h2>
+              <span id="conv-count" class="text-xs px-2 py-0.5 rounded-full bg-sparkle-purple/10 text-sparkle-purple font-bold"></span>
+            </div>
+            <div class="relative">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="conv-search" type="text" placeholder="Search chats..." oninput="renderConvList()" class="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+            </div>
+          </div>
+          <div id="conv-list" class="flex-1 overflow-y-auto divide-y divide-slate-100"></div>
+        </div>
+        <!-- Chat Pane -->
+        <div id="chat-pane" class="flex-1 flex-col hidden md:flex bg-slate-50/50">
+          <div id="chat-header" class="p-4 bg-white border-b border-slate-200 flex items-center gap-3">
+            <button onclick="backToConvList()" class="md:hidden p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 mr-1"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+            <div id="chat-avatar" class="w-10 h-10 rounded-full bg-gradient-to-tr from-sparkle-purple to-sparkle-pink flex items-center justify-center text-white font-black text-sm"></div>
+            <div>
+              <p id="chat-name" class="font-black text-xs sm:text-sm"></p>
+              <p id="chat-univ" class="text-[11px] text-slate-500"></p>
+            </div>
+          </div>
+          <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+          <form onsubmit="sendMsg(event)" class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+            <input id="msg-input" type="text" placeholder="Write a message..." class="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+            <button type="submit" class="p-2.5 rounded-xl bg-sparkle-purple text-white hover:bg-sparkle-purple-dark transition-all">
+              <i data-lucide="send" class="w-4 h-4"></i>
+            </button>
+          </form>
+        </div>
+        <div id="chat-empty" class="flex-1 hidden md:flex flex-col items-center justify-center text-slate-400">
+          <i data-lucide="message-square" class="w-12 h-12 text-slate-300 mb-2"></i>
+          <p class="font-bold text-sm text-slate-700">Select a conversation</p>
+          <p class="text-xs mt-1">Chat directly with peers across Kenyan universities.</p>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /main layout -->
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav id="bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200 shadow-lg flex items-center justify-around px-2 py-1">
+    <button onclick="setTab('feed')" id="bnav-feed" class="flex flex-col items-center flex-1 py-1.5 text-sparkle-purple font-bold transition-colors">
+      <i data-lucide="flame" class="w-5 h-5"></i><span class="text-[11px] mt-0.5">Feed</span>
+    </button>
+    <button onclick="setTab('gigs')" id="bnav-gigs" class="flex flex-col items-center flex-1 py-1.5 text-slate-500 hover:text-slate-700 transition-colors">
+      <i data-lucide="briefcase" class="w-5 h-5"></i><span class="text-[11px] mt-0.5">Gigs</span>
+    </button>
+    <button onclick="setTab('communities')" id="bnav-communities" class="flex flex-col items-center flex-1 py-1.5 text-slate-500 hover:text-slate-700 transition-colors">
+      <i data-lucide="users" class="w-5 h-5"></i><span class="text-[11px] mt-0.5">Clubs</span>
+    </button>
+    <button onclick="setTab('events')" id="bnav-events" class="flex flex-col items-center flex-1 py-1.5 text-slate-500 hover:text-slate-700 transition-colors">
+      <i data-lucide="calendar" class="w-5 h-5"></i><span class="text-[11px] mt-0.5">Events</span>
+    </button>
+    <button onclick="setTab('messages')" id="bnav-messages" class="relative flex flex-col items-center flex-1 py-1.5 text-slate-500 hover:text-slate-700 transition-colors">
+      <span class="relative inline-block">
+        <i data-lucide="message-square" class="w-5 h-5"></i>
+        <span id="msg-badge-mobile" class="hidden absolute -top-1.5 -right-2 bg-sparkle-purple text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">1</span>
+      </span>
+      <span class="text-[11px] mt-0.5">Chats</span>
+    </button>
+  </nav>
+
+  <!-- ============================================================
+       AUTH MODAL
+  ============================================================ -->
+  <div id="auth-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden my-8 fade-in">
+      <!-- Banner -->
+      <div class="bg-gradient-to-r from-sparkle-purple via-sparkle-purple-dark to-sparkle-pink p-6 text-white text-center relative">
+        <div class="w-12 h-12 mx-auto rounded-2xl bg-white/20 flex items-center justify-center mb-3">
+          <i data-lucide="sparkles" class="w-7 h-7 text-white animate-pulse"></i>
+        </div>
+        <h2 class="text-2xl font-black tracking-tight">Sparkle Connect</h2>
+        <p class="text-xs text-white/90 mt-1 font-medium">Kenya's Premier Student Campus Network &amp; Gig Hub 🇰🇪</p>
+        <div class="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-bold text-white">
+          <i data-lucide="database" class="w-3.5 h-3.5 text-sparkle-mint"></i> Database Synced &amp; Auto-Saved
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex border-b border-slate-200 bg-slate-50/70 p-1">
+        <button onclick="setAuthMode('gmail')" id="atab-gmail" class="flex-1 py-2 text-xs font-bold rounded-xl bg-white text-sparkle-purple shadow-sm transition-all">Gmail Instant Login</button>
+        <button onclick="setAuthMode('signin')" id="atab-signin" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-500 hover:text-slate-900 transition-all">Sign In</button>
+        <button onclick="setAuthMode('signup')" id="atab-signup" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-500 hover:text-slate-900 transition-all">Create Account</button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6">
+        <div id="auth-error" class="hidden mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i><span id="auth-error-msg"></span>
+        </div>
+        <div id="auth-success" class="hidden mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+          <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i><span id="auth-success-msg"></span>
+        </div>
+
+        <!-- GMAIL MODE -->
+        <div id="auth-gmail" class="space-y-4">
+          <div class="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-slate-700 text-xs leading-relaxed">
+            <span class="font-bold text-indigo-900">✨ Zero Password Friction:</span> Enter your Gmail address. Sparkle Connect automatically fetches your student name, generates a safe token, and saves your profile straight to the database.
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Your Gmail Address</label>
+            <div class="relative">
+              <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="gmail-email" type="email" placeholder="e.g. yourname@gmail.com" class="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Display Name (Optional — auto-derived if blank)</label>
+            <div class="relative">
+              <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="gmail-name" type="text" placeholder="e.g. Jane Wanjiku" class="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+            </div>
+          </div>
+          <button onclick="doGmailSignIn()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-sparkle-purple to-sparkle-pink text-white font-black text-xs flex items-center justify-center gap-2 hover:opacity-95 transition-all shadow-md">
+            <i data-lucide="sparkles" class="w-4 h-4"></i> Log in with Gmail (Auto-Save to DB) <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- SIGN IN MODE -->
+        <div id="auth-signin" class="hidden space-y-3.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+            <div class="relative">
+              <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="signin-email" type="email" placeholder="student@uonbi.ac.ke" class="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+            <div class="relative">
+              <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="signin-pwd" type="password" placeholder="••••••••" class="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+            </div>
+          </div>
+          <button onclick="doSignIn()" class="w-full py-3 px-4 rounded-xl bg-sparkle-purple hover:bg-sparkle-purple-dark text-white font-black text-xs transition-all shadow-md">Sign In to Sparkle Connect</button>
+        </div>
+
+        <!-- SIGN UP MODE -->
+        <div id="auth-signup" class="hidden space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Full Student Name</label>
+            <div class="relative">
+              <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="su-name" type="text" placeholder="Brian Mutua" class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Campus Email</label>
+            <div class="relative">
+              <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="su-email" type="email" placeholder="brian@student.ku.ac.ke" class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">University</label>
+              <select id="su-univ" class="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-semibold">
+                <option value="UoN">UoN</option><option value="KU">KU</option><option value="Strathmore">Strathmore</option>
+                <option value="JKUAT">JKUAT</option><option value="Moi">Moi</option><option value="Egerton">Egerton</option>
+                <option value="USIU">USIU-Africa</option><option value="MKU">MKU</option><option value="TUK">TUK</option>
+                <option value="Daystar">Daystar</option><option value="Maseno">Maseno</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Year of Study</label>
+              <select id="su-year" class="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-semibold">
+                <option>1st Year</option><option selected>2nd Year</option><option>3rd Year</option><option>4th Year</option><option>Postgrad</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Course / Degree</label>
+            <div class="relative">
+              <i data-lucide="book-open" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="su-course" type="text" placeholder="BSc Software Engineering" class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+            <div class="relative">
+              <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="su-pwd" type="password" placeholder="Create a strong password" class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+            </div>
+          </div>
+          <button onclick="doSignUp()" class="w-full py-3 px-4 rounded-xl bg-sparkle-purple hover:bg-sparkle-purple-dark text-white font-black text-xs transition-all shadow-md">Complete Registration &amp; Save to DB</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE MODAL -->
+  <div id="profile-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden my-8 fade-in">
+      <div class="h-28 bg-gradient-to-r from-sparkle-purple via-indigo-600 to-sparkle-pink relative">
+        <button onclick="closeProfile()" class="absolute top-4 right-4 p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="px-6 pb-6 pt-0 relative">
+        <div class="flex justify-between items-end -mt-12 mb-4">
+          <div id="profile-avatar-wrap" class="w-24 h-24 rounded-2xl border-4 border-white shadow-md bg-gradient-to-tr from-sparkle-purple to-sparkle-pink flex items-center justify-center text-white font-black text-3xl"></div>
+          <button onclick="doSignOut()" class="px-3.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs flex items-center gap-1.5 transition-all">
+            <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+          </button>
+        </div>
+        <h3 id="profile-name" class="text-xl font-black text-slate-900 mb-0.5"></h3>
+        <p id="profile-bio" class="text-xs text-slate-600 leading-relaxed font-medium mb-4"></p>
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 mb-4">
+          <div id="profile-univ" class="flex items-center gap-2 text-xs font-bold text-slate-800"></div>
+          <div id="profile-course" class="flex items-center gap-2 text-xs text-slate-600"></div>
+          <div id="profile-joined" class="flex items-center gap-2 text-xs text-slate-500"></div>
+        </div>
+        <div id="profile-skills" class="flex flex-wrap gap-1.5"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS DRAWER -->
+  <div id="notif-drawer" class="hidden fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm">
+    <div class="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 slide-right">
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="bell" class="w-5 h-5 text-sparkle-purple"></i>
+          <h3 class="font-black text-sm">Notifications</h3>
+          <span id="notif-count-label" class="text-xs px-2 py-0.5 rounded-full bg-sparkle-purple text-white font-bold hidden"></span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button onclick="markAllRead()" title="Mark all read" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><i data-lucide="check-check" class="w-4 h-4"></i></button>
+          <button onclick="closeNotifications()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+      </div>
+      <div id="notif-list" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- CREATE POST MODAL -->
+  <div id="create-post-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden my-8 fade-in">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-sparkle-purple/10 flex items-center justify-center text-sparkle-purple"><i data-lucide="sparkles" class="w-4 h-4"></i></div>
+          <h3 class="font-black text-base text-slate-900">Create Campus Post</h3>
+        </div>
+        <button onclick="closeCreatePost()" class="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+          <div class="flex items-center gap-2.5">
+            <div id="cp-avatar" class="w-8 h-8 rounded-full bg-gradient-to-tr from-sparkle-purple to-sparkle-pink flex items-center justify-center text-white font-black text-sm"></div>
+            <div>
+              <p id="cp-name" class="text-xs font-bold text-slate-900"></p>
+              <p id="cp-univ" class="text-[10px] text-slate-500 font-medium"></p>
+            </div>
+          </div>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input id="cp-anon" type="checkbox" onchange="updateAnonPreview()" class="w-4 h-4 rounded text-sparkle-purple cursor-pointer" />
+            <span class="text-xs font-bold text-slate-700 flex items-center gap-1"><i data-lucide="eye-off" class="w-3.5 h-3.5 text-sparkle-orange inline"></i> Anon</span>
+          </label>
+        </div>
+        <textarea id="cp-content" rows="4" placeholder="What's happening on your campus today?" class="w-full p-3.5 text-xs rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 resize-none font-medium leading-relaxed"></textarea>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">Category</label>
+            <select id="cp-cat" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none font-semibold">
+              <option value="CAMPUS_LIFE">Campus Life</option>
+              <option value="TECH">Tech &amp; Coding</option>
+              <option value="ACADEMICS">Academics</option>
+              <option value="CAREER">Career &amp; Internships</option>
+              <option value="OPPORTUNITIES">Scholarships</option>
+              <option value="ENTREPRENEURSHIP">Campus Hustles</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">Tags (comma-separated)</label>
+            <div class="relative">
+              <i data-lucide="hash" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+              <input id="cp-tags" type="text" placeholder="uon, hackathon" class="w-full pl-8 pr-2.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none font-medium" />
+            </div>
+          </div>
+        </div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button onclick="closeCreatePost()" class="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+          <button onclick="submitPost()" class="px-5 py-2 text-xs font-black rounded-xl bg-sparkle-purple hover:bg-sparkle-purple-dark text-white flex items-center gap-1.5 shadow-md transition-all">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i> Publish Post
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLY GIG MODAL -->
+  <div id="apply-gig-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden my-8 fade-in">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span id="ag-comp" class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800"></span>
+            <span id="ag-by" class="text-xs text-slate-500 font-medium"></span>
+          </div>
+          <h3 id="ag-title" class="font-black text-base text-slate-900 line-clamp-1"></h3>
+        </div>
+        <button onclick="closeApplyGig()" class="p-1.5 rounded-full hover:bg-slate-200 text-slate-400 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="ag-success" class="hidden p-8 text-center space-y-3">
+        <i data-lucide="check-circle-2" class="w-12 h-12 text-emerald-500 mx-auto"></i>
+        <h4 class="font-black text-lg text-slate-900">Application Submitted!</h4>
+        <p class="text-xs text-slate-600">The client received your pitch. They will reach out via WhatsApp/Phone or Messages.</p>
+      </div>
+      <div id="ag-form" class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Why are you the right comrade for this gig?</label>
+          <textarea id="ag-note" rows="4" placeholder="Mention past campus projects, relevant coursework..." class="w-full p-3 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 resize-none font-medium"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number (WhatsApp / M-Pesa)</label>
+          <div class="relative">
+            <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input id="ag-phone" type="tel" placeholder="+254 712 345 678" value="+254 7" class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Portfolio / GitHub / Drive Link (Optional)</label>
+          <div class="relative">
+            <i data-lucide="link" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input id="ag-portfolio" type="url" placeholder="https://github.com/..." class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" />
+          </div>
+        </div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button onclick="closeApplyGig()" class="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+          <button onclick="submitGigApp()" class="px-5 py-2 text-xs font-black rounded-xl bg-sparkle-purple hover:bg-sparkle-purple-dark text-white flex items-center gap-1.5 shadow-md transition-all">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i> Submit Proposal
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- ============================================================
+     JAVASCRIPT — Full Application State & Rendering
+============================================================ -->
+<script>
+// ─── STATE ─────────────────────────────────────────────────────
+const DB_KEY = 'sparkle_web_v2';
+let state = loadState();
+let activeTab = 'feed';
+let feedCat = 'ALL';
+let gigCat = 'ALL';
+let univFilter = 'ALL';
+let activeConvId = null;
+let applyGigId = null;
+
+function loadState() {
+  try {
+    const s = localStorage.getItem(DB_KEY);
+    if (s) return JSON.parse(s);
+  } catch(e) {}
+  return getInitialState();
+}
+
+function saveState() {
+  try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+function getInitialState() {
+  return {
+    currentUser: null,
+    accounts: [],
+    posts: [
+      { id:'p1', authorId:'u_faith', authorName:'Faith Chebet', authorAvatar:'FC', authorUniversity:'Strathmore', authorCourse:'Business Information Tech', isAuthorVerified:true, content:'Excited to share that our campus fintech team just won the Inter-University Hackathon! Anyone looking to collaborate on building modern M-Pesa integrated student tools? Drop a comment or DM me! 💻🇰🇪', category:'TECH', isAnonymous:false, likesCount:42, commentsCount:2, isLikedByMe:false, timeAgo:'15m ago', comments:[{id:'c1',authorName:'Kevin Omondi',authorAvatar:'KO',authorUniversity:'JKUAT',content:'Congrats Faith! I do backend integrations with Daraja API, would love to connect.',timeAgo:'10m ago'},{id:'c2',authorName:'Amina Hassan',authorAvatar:'AH',authorUniversity:'UoN',content:'Super inspiring! Is the project open source?',timeAgo:'5m ago'}], tags:['fintech','hackathon','mpesa'] },
+      { id:'p2', authorId:'anon', authorName:'Anonymous Student', authorAvatar:'🔒', authorUniversity:'Kenyatta University', authorCourse:'', isAuthorVerified:false, content:'Does anyone know the best quiet revision spots around KU library during CATs week? The main study hall fills up before 8 AM!', category:'ANONYMOUS', isAnonymous:true, likesCount:28, commentsCount:1, isLikedByMe:true, timeAgo:'45m ago', comments:[{id:'c3',authorName:'Dennis Kip',authorAvatar:'DK',authorUniversity:'KU',content:'Try the 3rd floor postgraduate wing or the 8-4-4 pavilion, usually has power outlets and fewer people!',timeAgo:'30m ago'}], tags:['revision','ku','cats'] },
+      { id:'p3', authorId:'u_george', authorName:'George Kariuki', authorAvatar:'GK', authorUniversity:'JKUAT', authorCourse:'Mechatronics Engineering', isAuthorVerified:true, content:"We have open slots for 2 student hardware enthusiasts in the Juja Robotics Club. We're assembling an autonomous agriculture rover for the National Innovation Week. Check the Communities tab to join us!", category:'OPPORTUNITIES', isAnonymous:false, likesCount:64, commentsCount:0, isLikedByMe:false, timeAgo:'2h ago', comments:[], tags:['robotics','jkuat','innovation'] },
+      { id:'p4', authorId:'u_mercy', authorName:'Mercy Wanjiku', authorAvatar:'MW', authorUniversity:'University of Nairobi', authorCourse:'Economics & Statistics', isAuthorVerified:true, content:'Offering weekend peer tutoring sessions for Quantitative Methods & Calculus at Chiromo Campus. KES 500/hr. If you are struggling with CAT 2 prep, send me a message!', category:'CAREER', isAnonymous:false, likesCount:19, commentsCount:0, isLikedByMe:false, timeAgo:'3h ago', comments:[], tags:['tutoring','uon','calculus'] },
+    ],
+    gigs: [
+      { id:'g1', title:'Android Mobile App UI Redesign', description:'Looking for a talented student mobile designer/developer to refine Jetpack Compose layouts for a campus laundry booking startup. Great portfolio addition with compensation.', category:'Mobile & App Development', skillsRequired:['Android','Kotlin','Compose','Figma'], compensation:'KES 15,000', publisherName:'Dennis Mwangi', publisherUniversity:'Strathmore', publisherAvatar:'DM', deadline:'In 5 days', hasApplied:false, applicationsCount:4 },
+      { id:'g2', title:'Campus Tech Summit Poster & Social Media Graphics', description:'Design 3 vibrant promotional flyers, banner templates, and Instagram carousel graphics for the upcoming National Student Tech Summit at UoN.', category:'Graphic Design', skillsRequired:['Photoshop','Illustrator','Canva','Brand Identity'], compensation:'KES 8,000', publisherName:'Lydia Achieng', publisherUniversity:'University of Nairobi', publisherAvatar:'LA', deadline:'In 2 days', hasApplied:false, applicationsCount:7 },
+      { id:'g3', title:'Calculus & Discrete Maths Peer Tutor', description:'Looking for an engineering or mathematics 3rd/4th year student to tutor 2 freshmen twice a week on evenings.', category:'Academic Tutoring', skillsRequired:['Calculus','Linear Algebra','Teaching'], compensation:'KES 600 / session', publisherName:'Patrick Kimani', publisherUniversity:'UoN', publisherAvatar:'PK', deadline:'Open until filled', hasApplied:false, applicationsCount:2 },
+      { id:'g4', title:'Campus Event Ushers & Registration Leads', description:'Need 4 energetic, organized students to handle badge distribution, guest assistance, and registration at the KU Annual Career Expo.', category:'Event Support', skillsRequired:['Communication','Customer Care','Punctuality'], compensation:'KES 3,500/day + Lunch', publisherName:'KU Student Union', publisherUniversity:'Kenyatta University', publisherAvatar:'KU', deadline:'Tomorrow', hasApplied:false, applicationsCount:12 },
+    ],
+    communities: [
+      { id:'c1', name:'Nairobi Tech Student Developers', description:'A thriving cross-university hub for builders, open-source contributors, and software engineers across Kenyan institutions.', category:'Technology', universityAffiliation:'All Universities', membersCount:1420, isJoined:true, tags:['Kotlin','React','AI','Cloud'] },
+      { id:'c2', name:'UoN Innovators & Founders Club', description:'Official entrepreneurship network for University of Nairobi students launching ventures, finding co-founders, and pitching to angel investors.', category:'Startups & Biz', universityAffiliation:'University of Nairobi', membersCount:680, isJoined:false, tags:['Pitching','Venture','Funding'] },
+      { id:'c3', name:'KU Creatives & Digital Artists', description:'Graphic designers, photographers, motion animators, and visual storytellers at Kenyatta University sharing gigs, feedback, and gear.', category:'Creative Arts', universityAffiliation:'Kenyatta University', membersCount:512, isJoined:false, tags:['Design','Photography','Video'] },
+      { id:'c4', name:'Kenya Student Debate Guild', description:'Competitive parliamentary debate, public speaking workshops, and inter-varsity championships.', category:'Leadership & Policy', universityAffiliation:'All Universities', membersCount:340, isJoined:false, tags:['Debate','Public Speaking','Model UN'] },
+    ],
+    events: [
+      { id:'e1', title:'Kenya Inter-Varsity Tech Gala 2026', description:'The premier university tech exhibition featuring keynote panels from Silicon Savannah leaders, pitch competitions, and developer networking.', university:'All Universities', venue:'UoN Taifa Hall & Live Streaming', dateString:'Sat, Nov 14', timeString:'9:00 AM - 5:00 PM EAT', attendeeCount:480, isRegistered:true },
+      { id:'e2', title:'Campus Freelancing & Remote Work Playbook', description:'Live interactive masterclass on landing global remote tech and design gigs while in school, tax basics for Kenyan youths, and getting paid via M-Pesa.', university:'Strathmore', venue:'Google Meet / Online Webinar', dateString:'Wed, Oct 28', timeString:'6:30 PM - 8:00 PM EAT', attendeeCount:310, isRegistered:false },
+      { id:'e3', title:'KU Annual Culture Fest & Music Jam', description:'Campus food stalls, cultural runway showcases, live student bands, and guest DJ performances at the KU Amphitheatre.', university:'Kenyatta University', venue:'KU Open-Air Amphitheatre', dateString:'Fri, Nov 20', timeString:'2:00 PM - 10:00 PM EAT', attendeeCount:1250, isRegistered:false },
+    ],
+    conversations: [
+      { id:'conv1', participantName:'Dennis Mwangi', participantAvatar:'DM', participantUniversity:'Strathmore University', lastMessage:'Hey! Loved your application on the Android Gig. Can we schedule a brief 10-min chat?', lastMessageTime:'12m ago', unreadCount:1, messages:[{id:'m1',senderId:'dm',text:'Hi! Saw your Kotlin portfolio on Sparkle Connect.',timestamp:'1:15 PM',isFromMe:false},{id:'m2',senderId:'me',text:'Hello Dennis! Yes, I built multiple Compose & Room database projects for Kenyan campus users.',timestamp:'1:18 PM',isFromMe:true},{id:'m3',senderId:'dm',text:'Hey! Loved your application on the Android Gig. Can we schedule a brief 10-min chat?',timestamp:'1:24 PM',isFromMe:false}] },
+      { id:'conv2', participantName:'Lydia Achieng', participantAvatar:'LA', participantUniversity:'University of Nairobi', lastMessage:'The Figma prototype has been shared with the tech gala organizing team.', lastMessageTime:'2h ago', unreadCount:0, messages:[{id:'m4',senderId:'la',text:'The Figma prototype has been shared with the tech gala organizing team.',timestamp:'11:00 AM',isFromMe:false}] },
+    ],
+    notifications: [
+      { id:'n1', title:'New Gig Application Received', body:'Kevin Omondi applied to your "Campus Tech Summit Poster" opportunity.', timeAgo:'10m ago', type:'gig', isRead:false },
+      { id:'n2', title:'Campus Event Reminder', body:'"Kenya Inter-Varsity Tech Gala 2026" starts in 3 days. Check your schedule!', timeAgo:'1h ago', type:'event', isRead:false },
+      { id:'n3', title:'Welcome to Sparkle Connect 🇰🇪', body:'Your student account is recorded in the campus database. Explore gigs, clubs, and peer feeds!', timeAgo:'1d ago', type:'system', isRead:true },
+    ],
+  };
+}
+
+// ─── AUTH ───────────────────────────────────────────────────────
+function openAuth() { document.getElementById('auth-modal').classList.remove('hidden'); setAuthMode('gmail'); }
+function closeAuth() { document.getElementById('auth-modal').classList.add('hidden'); }
+
+function setAuthMode(mode) {
+  ['gmail','signin','signup'].forEach(m => {
+    document.getElementById('auth-'+m).classList.toggle('hidden', m !== mode);
+    const tab = document.getElementById('atab-'+m);
+    if (m === mode) { tab.classList.add('bg-white','text-sparkle-purple','shadow-sm'); tab.classList.remove('text-slate-500'); }
+    else { tab.classList.remove('bg-white','text-sparkle-purple','shadow-sm'); tab.classList.add('text-slate-500'); }
+  });
+  clearAuthMessages();
+}
+
+function clearAuthMessages() {
+  document.getElementById('auth-error').classList.add('hidden');
+  document.getElementById('auth-success').classList.add('hidden');
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  document.getElementById('auth-error-msg').textContent = msg;
+  el.classList.remove('hidden');
+  document.getElementById('auth-success').classList.add('hidden');
+}
+
+function showAuthSuccess(msg) {
+  const el = document.getElementById('auth-success');
+  document.getElementById('auth-success-msg').textContent = msg;
+  el.classList.remove('hidden');
+  document.getElementById('auth-error').classList.add('hidden');
+}
+
+function doGmailSignIn() {
+  const email = document.getElementById('gmail-email').value.trim().toLowerCase();
+  let name = document.getElementById('gmail-name').value.trim();
+  if (!email) { showAuthError('Please enter your Gmail address.'); return; }
+  if (!email.includes('@')) { showAuthError('Please enter a valid email address.'); return; }
+
+  // Check existing
+  const existing = state.accounts.find(a => a.email === email || a.googleEmail === email);
+  if (existing) {
+    loginAs(existing);
+    showAuthSuccess('Welcome back, ' + existing.profile.displayName + '!');
+    setTimeout(closeAuth, 1200);
+    return;
+  }
+
+  // Derive name
+  if (!name) {
+    const prefix = email.split('@')[0];
+    name = prefix.replace(/[._-]/g,' ').split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  }
+  const id = 'user_' + Date.now();
+  const account = {
+    id, email, googleEmail: email,
+    password: 'sparkle_' + Math.random().toString(36).substring(2,10),
+    authProvider: 'GOOGLE',
+    isRecordedInDatabase: true,
+    profile: {
+      id, username: email.split('@')[0].replace(/[^a-z0-9]/g,'_'),
+      displayName: name, email,
+      avatarUrl: '', bio: 'Student on Sparkle Connect 🇰🇪', university: 'UoN',
+      course: 'BSc Computer Science', yearOfStudy: 2,
+      skills: ['Campus Networking','Research'], interests: ['Tech & Coding','Campus Life'],
+      joinedDate: new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'}),
+    }
+  };
+  state.accounts.push(account);
+  loginAs(account);
+  saveState();
+  showAuthSuccess('Welcome, ' + name + '! Profile saved to database.');
+  setTimeout(closeAuth, 1300);
+}
+
+function doSignIn() {
+  const email = document.getElementById('signin-email').value.trim().toLowerCase();
+  const pwd = document.getElementById('signin-pwd').value;
+  if (!email || !pwd) { showAuthError('Please fill in both fields.'); return; }
+  const acc = state.accounts.find(a => a.email === email || a.googleEmail === email);
+  if (!acc) { showAuthError('No account found. Create an account or use Gmail login.'); return; }
+  if (acc.password && acc.password !== pwd) { showAuthError('Incorrect password. Try Gmail login instead.'); return; }
+  loginAs(acc);
+  saveState();
+  setTimeout(closeAuth, 400);
+}
+
+function doSignUp() {
+  const name = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.trim().toLowerCase();
+  const univ = document.getElementById('su-univ').value;
+  const course = document.getElementById('su-course').value.trim();
+  const pwd = document.getElementById('su-pwd').value;
+  if (!name || !email || !course || !pwd) { showAuthError('Please complete all required fields.'); return; }
+  if (state.accounts.find(a => a.email === email)) { showAuthError('An account with this email already exists. Sign in instead.'); return; }
+  const id = 'user_' + Date.now();
+  const acc = {
+    id, email, password: pwd, authProvider: 'EMAIL', isRecordedInDatabase: true,
+    profile: {
+      id, username: email.split('@')[0].replace(/[^a-z0-9]/g,'_'),
+      displayName: name, email,
+      avatarUrl: '', bio: 'Student at ' + univ + ' • ' + course,
+      university: univ, course,
+      yearOfStudy: parseInt(document.getElementById('su-year').value) || 2,
+      skills: ['Campus Networking'], interests: ['Campus Life'],
+      joinedDate: new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'}),
+    }
+  };
+  state.accounts.push(acc);
+  loginAs(acc);
+  saveState();
+  setTimeout(closeAuth, 400);
+}
+
+function loginAs(acc) {
+  state.currentUser = acc.profile;
+  updateNavProfile();
+}
+
+function doSignOut() {
+  state.currentUser = null;
+  saveState();
+  updateNavProfile();
+  closeProfile();
+}
+
+function updateNavProfile() {
+  const u = state.currentUser;
+  const authBtn = document.getElementById('auth-btn');
+  const profBtn = document.getElementById('profile-btn');
+  if (u) {
+    authBtn.classList.add('hidden');
+    profBtn.classList.remove('hidden');
+    profBtn.style.display = 'flex';
+    document.getElementById('nav-avatar').textContent = initials(u.displayName);
+    document.getElementById('nav-name').textContent = u.displayName;
+    document.getElementById('nav-univ').textContent = u.university || 'Student';
+  } else {
+    authBtn.classList.remove('hidden');
+    authBtn.style.display = 'flex';
+    profBtn.classList.add('hidden');
+    profBtn.style.display = 'none';
+  }
+}
+
+// ─── PROFILE MODAL ─────────────────────────────────────────────
+function openProfile() {
+  const u = state.currentUser;
+  if (!u) return;
+  document.getElementById('profile-avatar-wrap').textContent = initials(u.displayName);
+  document.getElementById('profile-name').textContent = u.displayName;
+  document.getElementById('profile-bio').textContent = u.bio || '';
+  document.getElementById('profile-univ').innerHTML = `<i data-lucide="building" class="w-4 h-4 text-sparkle-purple"></i> ${u.university || '—'}`;
+  document.getElementById('profile-course').innerHTML = `<i data-lucide="book-open" class="w-4 h-4 text-sparkle-orange"></i> ${u.course || '—'} • Year ${u.yearOfStudy || '?'}`;
+  document.getElementById('profile-joined').innerHTML = `<i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i> Joined ${u.joinedDate || '—'}`;
+  document.getElementById('profile-skills').innerHTML = (u.skills||[]).map(s=>`<span class="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">${s}</span>`).join('');
+  document.getElementById('profile-modal').classList.remove('hidden');
+  lucide.createIcons();
+}
+function closeProfile() { document.getElementById('profile-modal').classList.add('hidden'); }
+
+// ─── TABS ───────────────────────────────────────────────────────
+function setTab(tab) {
+  activeTab = tab;
+  const screens = ['feed','gigs','communities','events','messages'];
+  screens.forEach(s => {
+    const el = document.getElementById('screen-'+s);
+    if (s === tab) { el.classList.remove('hidden'); if (s==='messages') el.style.display='flex'; }
+    else { el.classList.add('hidden'); el.style.display=''; }
+  });
+  // Sidebar nav
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const isActive = btn.id === 'nav-'+tab;
+    if (isActive) { btn.classList.add('tab-active'); btn.classList.remove('text-slate-600','hover:bg-slate-100'); }
+    else { btn.classList.remove('tab-active'); btn.classList.add('text-slate-600'); }
+  });
+  // Bottom nav
+  const tabs2 = ['feed','gigs','communities','events','messages'];
+  tabs2.forEach(t => {
+    const btn = document.getElementById('bnav-'+t);
+    if (!btn) return;
+    if (t === tab) { btn.classList.add('text-sparkle-purple','font-bold'); btn.classList.remove('text-slate-500'); }
+    else { btn.classList.remove('text-sparkle-purple','font-bold'); btn.classList.add('text-slate-500'); }
+  });
+  if (tab === 'feed') renderPosts();
+  if (tab === 'gigs') renderGigs();
+  if (tab === 'communities') renderCommunities();
+  if (tab === 'events') renderEvents();
+  if (tab === 'messages') { renderConvList(); updateMsgBadge(); }
+}
+
+function filterByUniversity(v) { univFilter = v; renderPosts(); renderGigs(); renderCommunities(); renderEvents(); }
+
+// ─── FEED ───────────────────────────────────────────────────────
+function setFeedCat(cat) {
+  feedCat = cat;
+  document.querySelectorAll('.cat-pill').forEach(b => {
+    if (b.id === 'cat-'+cat) { b.classList.add('active','bg-sparkle-purple','text-white','border-sparkle-purple'); b.classList.remove('bg-white','text-slate-600'); }
+    else { b.classList.remove('active','bg-sparkle-purple','text-white','border-sparkle-purple'); b.classList.add('bg-white','text-slate-600'); }
+  });
+  renderPosts();
+}
+
+function renderPosts() {
+  const q = (document.getElementById('feed-search')?.value||'').toLowerCase();
+  const posts = state.posts.filter(p => {
+    if (feedCat !== 'ALL' && p.category !== feedCat) return false;
+    if (q && !p.content.toLowerCase().includes(q) && !p.authorName.toLowerCase().includes(q) && !(p.tags||[]).some(t=>t.includes(q))) return false;
+    return true;
+  });
+  const c = document.getElementById('posts-container');
+  if (posts.length === 0) { c.innerHTML = emptyState('flame','No campus posts found','Be the first to share an update!'); return; }
+  c.innerHTML = posts.map(postCard).join('');
+  lucide.createIcons();
+}
+
+function postCard(p) {
+  const liked = p.isLikedByMe || p.isLiked;
+  const heartColor = liked ? 'fill-rose-600 text-rose-600':'text-slate-400';
+  const likeTextColor = liked ? 'text-rose-600 font-bold':'text-slate-500 hover:text-rose-500';
+  const tags = (p.tags||[]).map(t=>`<span class="text-[11px] font-semibold text-sparkle-purple bg-sparkle-purple/5 px-2 py-0.5 rounded-md">#${t}</span>`).join('');
+  const anonBadge = p.isAnonymous
+    ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1"><i data-lucide="eye-off" class="w-3 h-3"></i> Anonymous Confession</span>`
+    : `<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sparkle-purple/10 text-sparkle-purple">${p.authorUniversity||''}</span>`;
+
+  return `
+  <article class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div class="flex items-start justify-between gap-3 mb-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-sparkle-purple/30 to-sparkle-pink/30 flex items-center justify-center font-black text-sm text-sparkle-purple">${typeof p.authorAvatar === 'string' && p.authorAvatar.length <= 3 ? p.authorAvatar : p.authorName.slice(0,2).toUpperCase()}</div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-black text-sm text-slate-900">${p.authorName}</span>
+            ${anonBadge}
+          </div>
+          <p class="text-[11px] text-slate-500 font-medium">${p.authorCourse||''} ${p.authorCourse&&p.timeAgo?'•':''} ${p.timeAgo||''}</p>
+        </div>
+      </div>
+      <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">#${(p.category||'').replace('_',' ')}</span>
+    </div>
+    <p class="text-xs sm:text-sm text-slate-800 leading-relaxed mb-3 whitespace-pre-line">${escHtml(p.content)}</p>
+    ${tags ? `<div class="flex flex-wrap gap-1.5 mb-4">${tags}</div>` : ''}
+    <div class="flex items-center justify-between border-t border-slate-100 pt-3">
+      <div class="flex items-center gap-4">
+        <button onclick="toggleLike('${p.id}')" class="flex items-center gap-1.5 text-xs ${likeTextColor} transition-colors">
+          <i data-lucide="heart" class="w-4 h-4 ${heartColor}"></i> <span id="likes-${p.id}">${p.likesCount}</span>
+        </button>
+        <button onclick="toggleComments('${p.id}')" class="flex items-center gap-1.5 text-xs text-slate-500 hover:text-sparkle-purple transition-colors">
+          <i data-lucide="message-circle" class="w-4 h-4"></i> <span>${p.commentsCount} comments</span>
+        </button>
+      </div>
+      <button onclick="copyLink()" class="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors">
+        <i data-lucide="share-2" class="w-3.5 h-3.5"></i> Share
+      </button>
+    </div>
+    <div id="comments-${p.id}" class="hidden mt-4 pt-3 border-t border-slate-100 space-y-3">
+      ${(p.comments||[]).map(c=>`<div class="bg-slate-50 p-2.5 rounded-xl text-xs"><div class="flex items-center justify-between mb-1"><span class="font-bold text-slate-900">${c.authorName}</span><span class="text-[10px] text-slate-400">${c.timeAgo||''}</span></div><p class="text-slate-700 font-medium">${escHtml(c.content)}</p></div>`).join('')}
+      <div class="flex items-center gap-2 pt-1">
+        <input type="text" id="cinput-${p.id}" placeholder="Write a comment..." class="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400/30 font-medium" onkeydown="if(event.key==='Enter')submitComment('${p.id}')" />
+        <button onclick="submitComment('${p.id}')" class="p-2 rounded-xl bg-sparkle-purple text-white hover:bg-sparkle-purple-dark transition-colors"><i data-lucide="send" class="w-4 h-4"></i></button>
+      </div>
+    </div>
+  </article>`;
+}
+
+function toggleLike(id) {
+  const p = state.posts.find(x=>x.id===id);
+  if (!p) return;
+  const liked = p.isLikedByMe || p.isLiked;
+  p.isLikedByMe = !liked;
+  p.isLiked = !liked;
+  p.likesCount += liked ? -1 : 1;
+  saveState();
+  renderPosts();
+}
+
+function toggleComments(id) {
+  const el = document.getElementById('comments-'+id);
+  if (el) el.classList.toggle('hidden');
+}
+
+function submitComment(postId) {
+  const u = state.currentUser;
+  const inp = document.getElementById('cinput-'+postId);
+  const text = inp?.value?.trim();
+  if (!text) return;
+  if (!u) { openAuth(); return; }
+  const p = state.posts.find(x=>x.id===postId);
+  if (!p) return;
+  p.comments = p.comments || [];
+  p.comments.push({ id:'c'+Date.now(), authorName:u.displayName, authorAvatar:initials(u.displayName), authorUniversity:u.university||'Student', content:text, timeAgo:'Just now' });
+  p.commentsCount = p.comments.length;
+  saveState();
+  renderPosts();
+  setTimeout(()=>{ const el=document.getElementById('comments-'+postId); if(el)el.classList.remove('hidden'); },50);
+}
+
+// ─── GIGS ───────────────────────────────────────────────────────
+function setGigCat(cat) {
+  gigCat = cat;
+  document.querySelectorAll('#screen-gigs .cat-pill').forEach(b => {
+    if (b.id === 'gcat-'+cat) { b.classList.add('active','bg-sparkle-purple','text-white','border-sparkle-purple'); b.classList.remove('bg-white','text-slate-600'); }
+    else { b.classList.remove('active','bg-sparkle-purple','text-white','border-sparkle-purple'); b.classList.add('bg-white','text-slate-600'); }
+  });
+  renderGigs();
+}
+
+function renderGigs() {
+  const q = (document.getElementById('gig-search')?.value||'').toLowerCase();
+  const gigs = state.gigs.filter(g => {
+    if (gigCat !== 'ALL' && !g.category.toLowerCase().includes(gigCat.toLowerCase())) return false;
+    if (q && !g.title.toLowerCase().includes(q) && !g.description.toLowerCase().includes(q) && !(g.skillsRequired||[]).some(s=>s.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const c = document.getElementById('gigs-container');
+  if (gigs.length === 0) { c.innerHTML = emptyState('briefcase','No gigs found','Try different filters or post the first gig!'); return; }
+  c.innerHTML = gigs.map(gigCard).join('');
+  lucide.createIcons();
+}
+
+function gigCard(g) {
+  const skills = (g.skillsRequired||[]).map(s=>`<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">${s}</span>`).join('');
+  const applied = g.hasApplied || g.isApplied;
+  const applyBtn = applied
+    ? `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i> Applied</span>`
+    : `<button onclick="openApplyGig('${g.id}')" class="px-3.5 py-1.5 rounded-xl bg-sparkle-purple hover:bg-sparkle-purple-dark text-white font-black text-xs flex items-center gap-1 transition-all shadow-sm"><i data-lucide="send" class="w-3 h-3"></i> Apply Now</button>`;
+  return `
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+    <div>
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <span class="text-xs font-black px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">${g.compensation||'—'}</span>
+        <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold"><i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i> ${g.deadline||''}</div>
+      </div>
+      <h3 class="font-black text-sm text-slate-900 mb-2 leading-snug">${escHtml(g.title)}</h3>
+      <p class="text-xs text-slate-600 leading-relaxed mb-4 line-clamp-3">${escHtml(g.description)}</p>
+      <div class="flex flex-wrap gap-1.5 mb-4">${skills}</div>
+    </div>
+    <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-sparkle-purple/30 to-sparkle-pink/30 flex items-center justify-center text-sparkle-purple font-black text-xs">${(g.publisherAvatar||g.publisherName||'?').slice(0,2).toUpperCase()}</div>
+        <div><p class="text-xs font-bold text-slate-800 truncate max-w-[120px]">${g.publisherName||''}</p><p class="text-[10px] text-slate-500">${g.publisherUniversity||''}</p></div>
+      </div>
+      ${applyBtn}
+    </div>
+  </div>`;
+}
+
+// ─── COMMUNITIES ────────────────────────────────────────────────
+function renderCommunities() {
+  const q = (document.getElementById('comm-search')?.value||'').toLowerCase();
+  const comms = state.communities.filter(c => {
+    if (q && !c.name.toLowerCase().includes(q) && !c.description.toLowerCase().includes(q) && !c.category.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const cont = document.getElementById('communities-container');
+  cont.innerHTML = comms.map(communityCard).join('');
+  lucide.createIcons();
+}
+
+function communityCard(c) {
+  const btn = c.isJoined
+    ? `<button onclick="toggleJoin('${c.id}')" class="px-4 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 flex items-center gap-1.5 transition-all"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> Joined</button>`
+    : `<button onclick="toggleJoin('${c.id}')" class="px-4 py-1.5 rounded-xl text-xs font-bold bg-sparkle-purple text-white hover:bg-sparkle-purple-dark flex items-center gap-1.5 shadow-sm transition-all"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Join Club</button>`;
+  return `
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+    <div>
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sparkle-purple/20 to-sparkle-pink/20 flex items-center justify-center text-sparkle-purple font-black text-lg">${c.name.charAt(0)}</div>
+          <div>
+            <h3 class="font-black text-sm text-slate-900 leading-snug">${escHtml(c.name)}</h3>
+            <p class="text-[11px] text-slate-500 font-medium">${c.universityAffiliation||''} • <span class="text-sparkle-purple font-semibold">${c.category||''}</span></p>
+          </div>
+        </div>
+        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">${(c.membersCount||0).toLocaleString()} members</span>
+      </div>
+      <p class="text-xs text-slate-600 leading-relaxed mb-4">${escHtml(c.description)}</p>
+    </div>
+    <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+      <span class="text-[11px] text-slate-400 flex items-center gap-1"><i data-lucide="globe" class="w-3.5 h-3.5"></i> Open to All Students</span>
+      ${btn}
+    </div>
+  </div>`;
+}
+
+function toggleJoin(id) {
+  const c = state.communities.find(x=>x.id===id);
+  if (!c) return;
+  c.isJoined = !c.isJoined;
+  c.membersCount += c.isJoined ? 1 : -1;
+  saveState();
+  renderCommunities();
+}
+
+// ─── EVENTS ─────────────────────────────────────────────────────
+function renderEvents() {
+  const q = (document.getElementById('evt-search')?.value||'').toLowerCase();
+  const evts = state.events.filter(e => {
+    if (q && !e.title.toLowerCase().includes(q) && !e.description.toLowerCase().includes(q) && !(e.venue||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const cont = document.getElementById('events-container');
+  cont.innerHTML = evts.map(eventCard).join('');
+  lucide.createIcons();
+}
+
+function eventCard(e) {
+  const rsvpd = e.isRegistered || e.isRsvpd;
+  const rsvpBtn = rsvpd
+    ? `<button onclick="toggleRsvp('${e.id}')" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5 transition-all"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> RSVP Confirmed</button>`
+    : `<button onclick="toggleRsvp('${e.id}')" class="px-4 py-2 rounded-xl text-xs font-bold bg-sparkle-purple text-white hover:bg-sparkle-purple-dark flex items-center gap-1.5 shadow-sm transition-all"><i data-lucide="plus" class="w-3.5 h-3.5"></i> RSVP Attend</button>`;
+  return `
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+    <div>
+      <div class="text-[11px] font-bold uppercase tracking-wider text-sparkle-purple mb-2">${e.university||''}</div>
+      <h3 class="font-black text-base text-slate-900 mb-2 leading-snug">${escHtml(e.title)}</h3>
+      <p class="text-xs text-slate-600 leading-relaxed mb-4">${escHtml(e.description)}</p>
+      <div class="space-y-1.5 text-xs text-slate-600 mb-4">
+        <div class="flex items-center gap-2 font-medium"><i data-lucide="calendar" class="w-4 h-4 text-sparkle-purple"></i> ${e.dateString||''} • ${e.timeString||''}</div>
+        <div class="flex items-center gap-2 font-medium"><i data-lucide="map-pin" class="w-4 h-4 text-sparkle-orange"></i> ${e.venue||''}</div>
+        <div class="flex items-center gap-2 font-medium text-slate-500"><i data-lucide="users" class="w-4 h-4 text-slate-400"></i> ${(e.attendeeCount||e.attendeesCount||0).toLocaleString()} Comrades Attending</div>
+      </div>
+    </div>
+    <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+      <span class="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">Free Student Entry</span>
+      ${rsvpBtn}
+    </div>
+  </div>`;
+}
+
+function toggleRsvp(id) {
+  const e = state.events.find(x=>x.id===id);
+  if (!e) return;
+  const was = e.isRegistered || e.isRsvpd;
+  e.isRegistered = !was;
+  e.isRsvpd = !was;
+  e.attendeeCount = (e.attendeeCount||0) + (!was ? 1 : -1);
+  saveState();
+  renderEvents();
+}
+
+// ─── MESSAGES ───────────────────────────────────────────────────
+function renderConvList() {
+  const q = (document.getElementById('conv-search')?.value||'').toLowerCase();
+  const convs = state.conversations.filter(c => !q || c.participantName.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q));
+  document.getElementById('conv-count').textContent = convs.length + ' Active';
+  const list = document.getElementById('conv-list');
+  list.innerHTML = convs.map(c => {
+    const isActive = c.id === activeConvId;
+    return `<button onclick="openConv('${c.id}')" class="w-full p-4 flex items-start gap-3 text-left transition-colors ${isActive?'bg-sparkle-purple/5':'hover:bg-slate-50'}">
+      <div class="relative">
+        <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-sparkle-purple/30 to-sparkle-pink/30 flex items-center justify-center font-black text-sm text-sparkle-purple">${(c.participantAvatar||c.participantName||'?').slice(0,2).toUpperCase()}</div>
+        ${c.unreadCount>0?`<span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-sparkle-purple text-white text-[10px] font-black flex items-center justify-center">${c.unreadCount}</span>`:''}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between gap-1 mb-1">
+          <span class="font-black text-xs text-slate-900 truncate">${c.participantName}</span>
+          <span class="text-[10px] text-slate-400 shrink-0">${c.lastMessageTime||''}</span>
+        </div>
+        <p class="text-[11px] text-sparkle-purple font-medium mb-1 truncate">${c.participantUniversity||''}</p>
+        <p class="text-xs text-slate-500 truncate font-medium">${c.lastMessage||''}</p>
+      </div>
+    </button>`;
+  }).join('');
+  updateMsgBadge();
+}
+
+function openConv(id) {
+  activeConvId = id;
+  const conv = state.conversations.find(c=>c.id===id);
+  if (!conv) return;
+  conv.unreadCount = 0;
+  saveState();
+  // On mobile: hide list, show chat
+  if (window.innerWidth < 768) {
+    document.getElementById('conv-list-pane').classList.add('hidden');
+    document.getElementById('chat-pane').classList.remove('hidden');
+    document.getElementById('chat-pane').style.display='flex';
+  } else {
+    document.getElementById('chat-empty').style.display = 'none';
+    document.getElementById('chat-empty').classList.add('hidden');
+    document.getElementById('chat-pane').classList.remove('hidden');
+    document.getElementById('chat-pane').style.display='flex';
+  }
+  document.getElementById('chat-avatar').textContent = (conv.participantAvatar||conv.participantName||'?').slice(0,2).toUpperCase();
+  document.getElementById('chat-name').textContent = conv.participantName;
+  document.getElementById('chat-univ').textContent = conv.participantUniversity + ' • Student Verified';
+  renderChatMessages(conv);
+  renderConvList();
+}
+
+function backToConvList() {
+  document.getElementById('conv-list-pane').classList.remove('hidden');
+  document.getElementById('chat-pane').classList.add('hidden');
+  document.getElementById('chat-pane').style.display='';
+}
+
+function renderChatMessages(conv) {
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = (conv.messages||[]).map(msg=>`
+  <div class="flex flex-col ${msg.isFromMe?'items-end':'items-start'}">
+    <div class="max-w-[78%] sm:max-w-md p-3.5 rounded-2xl text-xs sm:text-sm font-medium leading-relaxed ${msg.isFromMe?'bg-sparkle-purple text-white shadow-sm':'bg-white text-slate-800 border border-slate-200 shadow-sm'}">
+      ${escHtml(msg.text||msg.content||'')}
+    </div>
+    <div class="flex items-center gap-1 mt-1 px-1">
+      <span class="text-[10px] text-slate-400 font-medium">${msg.timestamp||''}</span>
+      ${msg.isFromMe?`<i data-lucide="check-check" class="w-3.5 h-3.5 text-sparkle-purple"></i>`:''}
+    </div>
+  </div>`).join('');
+  lucide.createIcons();
+  container.scrollTop = container.scrollHeight;
+}
+
+function sendMsg(e) {
+  e.preventDefault();
+  const u = state.currentUser;
+  if (!u) { openAuth(); return; }
+  const inp = document.getElementById('msg-input');
+  const text = inp.value.trim();
+  if (!text || !activeConvId) return;
+  const conv = state.conversations.find(c=>c.id===activeConvId);
+  if (!conv) return;
+  const msg = { id:'m'+Date.now(), senderId:u.id||'me', text, timestamp: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), isFromMe:true };
+  conv.messages.push(msg);
+  conv.lastMessage = text;
+  conv.lastMessageTime = 'Just now';
+  saveState();
+  inp.value = '';
+  renderChatMessages(conv);
+  renderConvList();
+}
+
+function updateMsgBadge() {
+  const total = state.conversations.reduce((a,c)=>a+(c.unreadCount||0),0);
+  ['msg-badge-sidebar','msg-badge-mobile'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (total > 0) { el.textContent = total; el.classList.remove('hidden'); }
+    else el.classList.add('hidden');
+  });
+}
+
+// ─── NOTIFICATIONS ──────────────────────────────────────────────
+function toggleNotifications() {
+  const drawer = document.getElementById('notif-drawer');
+  if (drawer.classList.contains('hidden')) { renderNotifications(); drawer.classList.remove('hidden'); }
+  else closeNotifications();
+}
+function closeNotifications() { document.getElementById('notif-drawer').classList.add('hidden'); }
+
+function renderNotifications() {
+  const unread = state.notifications.filter(n=>!n.isRead).length;
+  const label = document.getElementById('notif-count-label');
+  if (unread > 0) { label.textContent = unread + ' new'; label.classList.remove('hidden'); }
+  else label.classList.add('hidden');
+  document.getElementById('notif-badge').textContent = unread;
+  if (unread > 0) document.getElementById('notif-badge').classList.remove('hidden');
+  else document.getElementById('notif-badge').classList.add('hidden');
+
+  const list = document.getElementById('notif-list');
+  list.innerHTML = state.notifications.map(n=>`
+  <div onclick="readNotif('${n.id}')" class="p-3 rounded-2xl border transition-all cursor-pointer ${n.isRead?'bg-white border-slate-100 text-slate-600':'bg-indigo-50/50 border-indigo-100 text-slate-900 shadow-sm'}">
+    <div class="flex items-start gap-2.5">
+      <div class="p-2 rounded-xl bg-white shadow-sm border border-slate-100">
+        ${notifIcon(n.type)}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between gap-1">
+          <p class="text-xs font-bold truncate">${n.title}</p>
+          <span class="text-[10px] text-slate-400 shrink-0">${n.timeAgo||n.timestamp||''}</span>
+        </div>
+        <p class="text-xs text-slate-600 mt-0.5 leading-relaxed font-medium">${n.body}</p>
+      </div>
+    </div>
+  </div>`).join('');
+  lucide.createIcons();
+}
+
+function notifIcon(type) {
+  if (type==='gig') return '<i data-lucide="briefcase" class="w-4 h-4 text-emerald-600"></i>';
+  if (type==='event') return '<i data-lucide="calendar" class="w-4 h-4 text-sparkle-purple"></i>';
+  if (type==='message') return '<i data-lucide="message-square" class="w-4 h-4 text-sparkle-blue"></i>';
+  return '<i data-lucide="flame" class="w-4 h-4 text-sparkle-orange"></i>';
+}
+
+function readNotif(id) {
+  const n = state.notifications.find(x=>x.id===id);
+  if (n) n.isRead = true;
+  saveState();
+  renderNotifications();
+}
+
+function markAllRead() {
+  state.notifications.forEach(n=>n.isRead=true);
+  saveState();
+  renderNotifications();
+}
+
+// ─── CREATE POST ────────────────────────────────────────────────
+function openCreatePost() {
+  const u = state.currentUser;
+  if (!u) { openAuth(); return; }
+  document.getElementById('cp-avatar').textContent = initials(u.displayName);
+  document.getElementById('cp-name').textContent = u.displayName;
+  document.getElementById('cp-univ').textContent = u.university || 'Student';
+  document.getElementById('cp-anon').checked = false;
+  document.getElementById('cp-content').value = '';
+  document.getElementById('cp-tags').value = '';
+  document.getElementById('create-post-modal').classList.remove('hidden');
+  lucide.createIcons();
+}
+function closeCreatePost() { document.getElementById('create-post-modal').classList.add('hidden'); }
+function updateAnonPreview() {
+  const anon = document.getElementById('cp-anon').checked;
+  document.getElementById('cp-avatar').textContent = anon ? '🤫' : initials(state.currentUser?.displayName||'?');
+  document.getElementById('cp-name').textContent = anon ? 'Secret Comrade 🤫' : (state.currentUser?.displayName||'');
+  document.getElementById('cp-univ').textContent = anon ? 'Identities hidden' : (state.currentUser?.university||'');
+}
+function submitPost() {
+  const content = document.getElementById('cp-content').value.trim();
+  if (!content) return;
+  const u = state.currentUser;
+  const anon = document.getElementById('cp-anon').checked;
+  const cat = anon ? 'ANONYMOUS' : document.getElementById('cp-cat').value;
+  const tags = document.getElementById('cp-tags').value.split(',').map(t=>t.trim().replace(/^#/,'')).filter(Boolean);
+  const post = {
+    id: 'p'+Date.now(),
+    authorId: anon ? 'anon' : (u?.id||'anon'),
+    authorName: anon ? 'Secret Comrade' : (u?.displayName||'Student'),
+    authorAvatar: anon ? '🔒' : initials(u?.displayName||'?'),
+    authorUniversity: anon ? 'Kenyan Campus' : (u?.university||''),
+    authorCourse: anon ? '' : (u?.course||''),
+    isAuthorVerified: !anon,
+    content, category:cat, isAnonymous:anon,
+    likesCount:0, commentsCount:0, isLikedByMe:false,
+    timeAgo:'Just now', comments:[],
+    tags: tags.length ? tags : ['campus',cat.toLowerCase()],
+  };
+  state.posts.unshift(post);
+  saveState();
+  closeCreatePost();
+  setTab('feed');
+}
+
+// ─── CREATE GIG ─────────────────────────────────────────────────
+function openCreateGig() {
+  if (!state.currentUser) { openAuth(); return; }
+  const title = prompt('Gig Title:', '');
+  if (!title) return;
+  const comp = prompt('Compensation (e.g. KES 5,000):', 'KES 5,000');
+  const desc = prompt('Short description:', '');
+  if (!desc) return;
+  const u = state.currentUser;
+  state.gigs.unshift({
+    id:'g'+Date.now(), title, description:desc, category:'General',
+    skillsRequired:['General Campus Task'], compensation:comp||'KES 5,000',
+    publisherName:u.displayName, publisherUniversity:u.university||'Campus', publisherAvatar:initials(u.displayName),
+    deadline:'Open', hasApplied:false, applicationsCount:0,
+  });
+  saveState();
+  setTab('gigs');
+}
+
+// ─── APPLY GIG ──────────────────────────────────────────────────
+function openApplyGig(id) {
+  if (!state.currentUser) { openAuth(); return; }
+  applyGigId = id;
+  const gig = state.gigs.find(g=>g.id===id);
+  if (!gig) return;
+  document.getElementById('ag-comp').textContent = gig.compensation||'';
+  document.getElementById('ag-by').textContent = 'By ' + (gig.publisherName||'');
+  document.getElementById('ag-title').textContent = gig.title;
+  document.getElementById('ag-note').value = '';
+  document.getElementById('ag-phone').value = '+254 7';
+  document.getElementById('ag-portfolio').value = '';
+  document.getElementById('ag-success').classList.add('hidden');
+  document.getElementById('ag-form').classList.remove('hidden');
+  document.getElementById('apply-gig-modal').classList.remove('hidden');
+  lucide.createIcons();
+}
+function closeApplyGig() { document.getElementById('apply-gig-modal').classList.add('hidden'); applyGigId = null; }
+function submitGigApp() {
+  const note = document.getElementById('ag-note').value.trim();
+  const phone = document.getElementById('ag-phone').value.trim();
+  if (!note || !phone) { alert('Please fill in all required fields.'); return; }
+  const gig = state.gigs.find(g=>g.id===applyGigId);
+  if (gig) { gig.hasApplied = true; gig.isApplied = true; gig.applicationsCount = (gig.applicationsCount||0)+1; }
+  state.notifications.unshift({ id:'n'+Date.now(), title:'Gig Application Sent! 💼', body:`You applied for "${gig?.title}". The client has been notified.`, timeAgo:'Just now', type:'gig', isRead:false });
+  saveState();
+  document.getElementById('ag-form').classList.add('hidden');
+  document.getElementById('ag-success').classList.remove('hidden');
+  lucide.createIcons();
+  setTimeout(closeApplyGig, 2000);
+  renderGigs();
+}
+
+// ─── UTILITIES ──────────────────────────────────────────────────
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase() || '?';
+}
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function copyLink() {
+  navigator.clipboard?.writeText(window.location.href);
+  alert('Link copied to clipboard!');
+}
+function emptyState(icon, title, sub) {
+  return `<div class="col-span-full bg-white rounded-2xl border border-slate-200 p-12 text-center"><i data-lucide="${icon}" class="w-10 h-10 text-slate-300 mx-auto mb-2"></i><h4 class="font-black text-sm text-slate-800">${title}</h4><p class="text-xs text-slate-500 mt-1">${sub}</p></div>`;
+}
+
+// ─── BOOT ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  updateNavProfile();
+  renderPosts();
+  updateMsgBadge();
+  // Show auth modal if no current user
+  if (!state.currentUser) {
+    setTimeout(() => openAuth(), 600);
+  }
+});
+</script>
+</body>
+</html>

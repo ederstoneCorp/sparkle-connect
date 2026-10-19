@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "Sparkle Connect"
 
 include(":app")
+include(":app")

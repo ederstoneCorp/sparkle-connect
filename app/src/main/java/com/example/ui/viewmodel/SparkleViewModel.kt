@@ -35,10 +35,13 @@ data class SparkleUiState(
 
 class SparkleViewModel(
     application: Application,
-    private val repository: SparkleRepository = SparkleRepository(
-        SparkleDatabase.getDatabase(application).accountDao()
-    )
+    private val repository: SparkleRepository
 ) : AndroidViewModel(application) {
+
+    constructor(application: Application) : this(
+        application,
+        SparkleRepository(SparkleDatabase.getDatabase(application).accountDao())
+    )
 
     private val _uiState = MutableStateFlow(SparkleUiState())
     val uiState: StateFlow<SparkleUiState> = _uiState.asStateFlow()
@@ -260,10 +263,14 @@ class SparkleViewModel(
         return res
     }
 
-    fun signInWithGoogleAccount(googleEmail: String): Result<StudentProfile> {
-        val res = repository.signInWithGoogleAccount(googleEmail)
+    fun signInWithGoogleAccount(
+        googleEmail: String,
+        displayName: String? = null,
+        university: University? = null
+    ): Result<StudentProfile> {
+        val res = repository.signInWithGoogleAccount(googleEmail, displayName, university)
         if (res.isSuccess) {
-            _uiState.update { it.copy(snackbarMessage = "Signed in as ${res.getOrNull()?.displayName} via Google") }
+            _uiState.update { it.copy(snackbarMessage = "Welcome, ${res.getOrNull()?.displayName}! Logged in via Gmail & recorded in database.") }
         }
         return res
     }

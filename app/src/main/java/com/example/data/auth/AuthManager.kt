@@ -19,7 +19,18 @@ import kotlinx.coroutines.tasks.await
 
 class AuthManager(private val context: Context) {
 
-    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
+    private val auth: FirebaseAuth? by lazy {
+        try {
+            if (com.google.firebase.FirebaseApp.getApps(context).isNotEmpty()) {
+                FirebaseAuth.getInstance()
+            } else {
+                null
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "Firebase Auth not available: ${e.message}")
+            null
+        }
+    }
     private val credentialManager: CredentialManager by lazy { CredentialManager.create(context) }
 
     private val _currentUser = MutableStateFlow<FirebaseUser?>(null)
@@ -27,11 +38,13 @@ class AuthManager(private val context: Context) {
 
     init {
         try {
-            _currentUser.value = auth.currentUser
-            auth.addAuthStateListener { firebaseAuth ->
-                _currentUser.value = firebaseAuth.currentUser
+            auth?.let { fbAuth ->
+                _currentUser.value = fbAuth.currentUser
+                fbAuth.addAuthStateListener { firebaseAuth ->
+                    _currentUser.value = firebaseAuth.currentUser
+                }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.w(TAG, "Firebase Auth initialization notice: ${e.message}")
         }
     }
@@ -43,6 +56,8 @@ class AuthManager(private val context: Context) {
                 IllegalStateException("Google Client ID (default_web_client_id) is not configured yet.")
             )
         }
+
+        val fbAuth = auth ?: return Result.failure(IllegalStateException("Firebase Auth is not initialized"))
 
         return try {
             val googleIdOption = GetSignInWithGoogleOption.Builder(serverClientId)
@@ -61,7 +76,7 @@ class AuthManager(private val context: Context) {
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                 val idToken = googleIdTokenCredential.idToken
                 val authCredential = GoogleAuthProvider.getCredential(idToken, null)
-                val authResult = auth.signInWithCredential(authCredential).await()
+                val authResult = fbAuth.signInWithCredential(authCredential).await()
                 _currentUser.value = authResult.user
                 Result.success(authResult.user)
             } else {
@@ -77,7 +92,7 @@ class AuthManager(private val context: Context) {
 
     fun signOut() {
         try {
-            auth.signOut()
+            auth?.signOut()
             _currentUser.value = null
         } catch (e: Exception) {
             Log.e(TAG, "Sign out error", e)

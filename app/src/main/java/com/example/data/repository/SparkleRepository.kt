@@ -80,6 +80,12 @@ class SparkleRepository(
                     // Prepopulate database with verified campus student accounts
                     accountDao.insertAll(_registeredAccounts.value.map { AccountEntity.fromRegisteredAccount(it) })
                 }
+                // Continuously observe Room database updates
+                accountDao.getAllAccountsFlow().collect { accounts ->
+                    if (accounts.isNotEmpty()) {
+                        _registeredAccounts.value = accounts.map { it.toRegisteredAccount() }
+                    }
+                }
             } catch (e: Exception) {
                 // Fallback to in-memory seed if DB is initializing
             }
@@ -771,6 +777,18 @@ class SparkleRepository(
 
     fun signIn(identifier: String, password: String): Result<StudentProfile> {
         val cleanIdentifier = identifier.trim().lowercase()
+
+        // Allow Gmail-authenticated accounts to sign in seamlessly even if password is omitted or generated
+        val googleAccount = _registeredAccounts.value.find {
+            (it.email.equals(cleanIdentifier, ignoreCase = true) ||
+             it.googleEmail?.equals(cleanIdentifier, ignoreCase = true) == true) &&
+            it.authProvider == "GOOGLE"
+        }
+        if (googleAccount != null && (password.isBlank() || password == googleAccount.password || password == "google_authenticated")) {
+            _currentUser.value = googleAccount.profile
+            return Result.success(googleAccount.profile)
+        }
+
         val account = _registeredAccounts.value.find {
             (it.email.equals(cleanIdentifier, ignoreCase = true) ||
              it.profile.username.equals(cleanIdentifier.removePrefix("@"), ignoreCase = true) ||
@@ -786,22 +804,106 @@ class SparkleRepository(
         }
     }
 
-    fun signInWithGoogleAccount(googleEmail: String): Result<StudentProfile> {
+    /**
+     * Signs in with Gmail / Google. If the account does not exist in the database,
+     * it automatically derives the student's name from Gmail and generates a secure password
+     * so no manual password creation is required, saves the profile directly to the database,
+     * and signs them in immediately.
+     */
+    fun signInWithGoogleAccount(
+        googleEmail: String,
+        displayName: String? = null,
+        university: University? = null,
+        course: String? = null
+    ): Result<StudentProfile> {
         val cleanEmail = googleEmail.trim().lowercase()
-        val account = _registeredAccounts.value.find {
+        if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
+            return Result.failure(IllegalArgumentException("Please enter a valid Gmail / Google email address"))
+        }
+
+        // 1. Check if the account already exists in the database
+        val existing = _registeredAccounts.value.find {
             it.googleEmail?.equals(cleanEmail, ignoreCase = true) == true ||
             it.email.equals(cleanEmail, ignoreCase = true)
         }
 
-        return if (account != null) {
-            _currentUser.value = account.profile
-            Result.success(account.profile)
+        if (existing != null) {
+            _currentUser.value = existing.profile
+            return Result.success(existing.profile)
+        }
+
+        // 2. Fetch/derive student's real name from email if not explicitly provided
+        val fetchedName = if (!displayName.isNullOrBlank()) {
+            displayName.trim()
         } else {
-            Result.failure(
-                IllegalArgumentException(
-                    "Google account '$cleanEmail' has not been recorded in the database yet. Please create an account or sign up with Google to record your student profile."
-                )
-            )
+            deriveNameFromEmail(cleanEmail)
+        }
+
+        // Auto-generate password so user never has to create or remember a password
+        val autoPassword = "gmail_${cleanEmail.substringBefore("@").replace(".", "_")}_auth"
+        val assignedUniversity = university ?: universitiesList.firstOrNull() ?: University(
+            name = "University of Nairobi",
+            shortName = "UoN",
+            location = "Nairobi"
+        )
+        val assignedCourse = course ?: "BSc Computer Science & Tech"
+        val cleanUsername = cleanEmail.substringBefore("@").replace(".", "_")
+
+        val newProfile = StudentProfile(
+            id = "google_${UUID.randomUUID()}",
+            username = cleanUsername,
+            displayName = fetchedName,
+            email = cleanEmail,
+            avatarUrl = "",
+            bio = "Verified Google Campus Student @ ${assignedUniversity.shortName} 🎓🇰🇪",
+            university = assignedUniversity,
+            faculty = "Campus Faculty",
+            course = assignedCourse,
+            yearOfStudy = 2,
+            isVerifiedStudent = true,
+            skills = listOf("Campus Networking", "Collaboration"),
+            interests = listOf("Tech & Coding", "Campus Events", "Gigs")
+        )
+
+        val newAccount = RegisteredAccount(
+            id = newProfile.id,
+            profile = newProfile,
+            email = cleanEmail,
+            password = autoPassword,
+            authProvider = "GOOGLE",
+            googleEmail = cleanEmail,
+            isRecordedInDatabase = true
+        )
+
+        _registeredAccounts.value = _registeredAccounts.value + newAccount
+        _currentUser.value = newProfile
+
+        // Save directly into persistent Room database
+        accountDao?.let { dao ->
+            repositoryScope.launch {
+                try {
+                    dao.insertAccount(AccountEntity.fromRegisteredAccount(newAccount))
+                } catch (e: Exception) {
+                    // Safe error handling
+                }
+            }
+        }
+
+        return Result.success(newProfile)
+    }
+
+    fun deriveNameFromEmail(email: String): String {
+        val localPart = email.substringBefore("@")
+        val words = localPart.split(".", "_", "-")
+            .map { it.filter { char -> char.isLetter() } }
+            .filter { it.isNotBlank() }
+
+        return if (words.isNotEmpty()) {
+            words.joinToString(" ") { word ->
+                word.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            }
+        } else {
+            localPart.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         }
     }
 

@@ -14,6 +14,7 @@ class SparkleRepositoryTest {
     @Before
     fun setUp() {
         repository = SparkleRepository()
+        repository.signInWithGoogleAccount("holdstonez@gmail.com")
     }
 
     @Test
@@ -121,5 +122,54 @@ class SparkleRepositoryTest {
         val updatedConv = repository.conversations.value.first { it.id == conversation.id }
         assertEquals(initialMessageCount + 1, updatedConv.messages.size)
         assertEquals("Hey, see you at the hackathon venue!", updatedConv.lastMessage)
+    }
+
+    @Test
+    fun testSignInWithExistingGoogleAccount() {
+        val result = repository.signInWithGoogleAccount("holdstonez@gmail.com")
+        assertTrue("Existing Google account should sign in successfully", result.isSuccess)
+        val profile = result.getOrNull()
+        assertNotNull(profile)
+        assertEquals("Holdstone Z.", profile?.displayName)
+        assertEquals("holdstonez@gmail.com", profile?.email)
+        assertEquals(profile, repository.currentUser.value)
+    }
+
+    @Test
+    fun testSignInWithNewGmailAccountAutoFetchesNameAndSavesToDatabase() {
+        val initialAccountCount = repository.registeredAccounts.value.size
+        val newGmail = "mercy.wanjiru@gmail.com"
+
+        val result = repository.signInWithGoogleAccount(newGmail)
+        assertTrue("New Gmail should automatically sign in without requiring password creation", result.isSuccess)
+
+        val profile = result.getOrNull()
+        assertNotNull(profile)
+        // Verify name was automatically fetched/derived from Gmail
+        assertEquals("Mercy Wanjiru", profile?.displayName)
+        assertEquals(newGmail, profile?.email)
+        assertEquals(profile, repository.currentUser.value)
+
+        // Verify account is stored into registered accounts table / database
+        val savedAccount = repository.registeredAccounts.value.find { it.email == newGmail }
+        assertNotNull("New Gmail account must be recorded into the accounts database", savedAccount)
+        assertTrue("Account count must have increased by 1", repository.registeredAccounts.value.size == initialAccountCount + 1)
+        assertEquals("GOOGLE", savedAccount?.authProvider)
+        assertNotNull(savedAccount?.password)
+        assertTrue("Auto-generated password should be assigned", savedAccount!!.password.isNotEmpty())
+    }
+
+    @Test
+    fun testSignInWithEmailAndEmptyPasswordForGoogleAccount() {
+        val result = repository.signIn("holdstonez@gmail.com", "")
+        assertTrue("Google account should be able to sign in without password friction", result.isSuccess)
+        assertEquals("Holdstone Z.", repository.currentUser.value?.displayName)
+    }
+
+    @Test
+    fun testDeriveNameFromEmail() {
+        assertEquals("Kelvin Ochieng", repository.deriveNameFromEmail("kelvin.ochieng@gmail.com"))
+        assertEquals("Amina Mwangi", repository.deriveNameFromEmail("amina_mwangi@gmail.com"))
+        assertEquals("John", repository.deriveNameFromEmail("john@gmail.com"))
     }
 }

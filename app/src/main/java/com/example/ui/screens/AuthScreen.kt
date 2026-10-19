@@ -73,7 +73,7 @@ fun AuthScreen(
 
     // Dialog state for Google Sign In / Social Sign In
     var showGoogleSignInDialog by remember { mutableStateOf(false) }
-    var googleEmailInput by remember { mutableStateOf("holdstonez@gmail.com") }
+    var googleEmailInput by remember { mutableStateOf("") }
     var googleSignInError by remember { mutableStateOf<String?>(null) }
     var notRegisteredGoogleEmail by remember { mutableStateOf<String?>(null) }
 
@@ -231,16 +231,10 @@ fun AuthScreen(
             // Quick Actions: Google & Social Account Authentication
             item {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // Google Sign-In / Sign-Up Button
+                    // Gmail / Google Sign-In & Registration Option
                     OutlinedButton(
                         onClick = {
-                            if (isSignUpTab) {
-                                googleSignUpEmail = signUpEmail.ifBlank { "student@campus.ke" }
-                                googleSignUpRealName = signUpFullName
-                                showGoogleSignUpDialog = true
-                            } else {
-                                showGoogleSignInDialog = true
-                            }
+                            showGoogleSignInDialog = true
                         },
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
@@ -249,23 +243,32 @@ fun AuthScreen(
                         border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp)
+                            .height(54.dp)
                             .testTag("google_action_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Google Icon",
+                            contentDescription = "Gmail / Google Icon",
                             tint = SparklePurple,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = if (isSignUpTab) "Sign Up with Google Account" else "Sign In with Google Account",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Log in using Gmail",
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             )
-                        )
+                            Text(
+                                text = "Fetches name automatically & saves to database • No password needed",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -418,8 +421,19 @@ fun AuthScreen(
 
                             Button(
                                 onClick = {
-                                    if (loginIdentifier.isBlank() || loginPassword.isBlank()) {
-                                        loginError = "Please enter both your identifier and password"
+                                    if (loginIdentifier.isBlank()) {
+                                        loginError = "Please enter your email, username, or Gmail"
+                                        return@Button
+                                    }
+                                    if (loginIdentifier.trim().lowercase().endsWith("@gmail.com") && loginPassword.isBlank()) {
+                                        val result = onGoogleSignIn(loginIdentifier.trim())
+                                        if (result.isFailure) {
+                                            loginError = result.exceptionOrNull()?.message ?: "Gmail sign-in failed"
+                                        }
+                                        return@Button
+                                    }
+                                    if (loginPassword.isBlank()) {
+                                        loginError = "Please enter your password (or tap 'Log in using Gmail' above)"
                                         return@Button
                                     }
                                     val result = onSignIn(loginIdentifier, loginPassword)
@@ -438,128 +452,6 @@ fun AuthScreen(
                                     text = "Sign In to Sparkle Connect",
                                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                                 )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Storage,
-                            contentDescription = "Database",
-                            tint = SparklePurple,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Recorded Student Accounts in Database (${registeredAccounts.size}):",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold
-                            )
-                        )
-                    }
-
-                    Text(
-                        text = "Accounts saved in system. Tap any to sign in directly:",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-                }
-
-                // List of recorded database accounts
-                items(registeredAccounts, key = { it.id }) { acc ->
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clickable {
-                                loginIdentifier = acc.email
-                                loginPassword = acc.password
-                                onSignIn(acc.email, acc.password)
-                            }
-                            .testTag("recorded_account_${acc.profile.username}")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(SparklePrimaryGradient),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = acc.profile.displayName.split(" ")
-                                        .mapNotNull { it.firstOrNull() }
-                                        .take(2)
-                                        .joinToString(""),
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = acc.profile.displayName,
-                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Surface(
-                                        color = SparklePurple.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(4.dp)
-                                    ) {
-                                        Text(
-                                            text = acc.authProvider,
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                color = SparklePurple,
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold
-                                            ),
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = "${acc.email} • ${acc.profile.university.shortName}",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 11.sp
-                                    )
-                                )
-                                Text(
-                                    text = acc.profile.course,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                        fontSize = 10.sp
-                                    )
-                                )
-                            }
-                            Button(
-                                onClick = {
-                                    loginIdentifier = acc.email
-                                    loginPassword = acc.password
-                                    onSignIn(acc.email, acc.password)
-                                },
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = SparklePurple)
-                            ) {
-                                Text("Sign In", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                             }
                         }
                     }
@@ -907,30 +799,29 @@ fun AuthScreen(
         }
     }
 
-    // ==================== DIALOG: GOOGLE SIGN-IN ====================
+    // ==================== DIALOG: GOOGLE / GMAIL SIGN-IN ====================
     if (showGoogleSignInDialog) {
         AlertDialog(
             onDismissRequest = {
                 showGoogleSignInDialog = false
                 googleSignInError = null
-                notRegisteredGoogleEmail = null
             },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.AccountCircle, contentDescription = null, tint = SparklePurple)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Sign in with Google Account", fontWeight = FontWeight.Bold)
+                    Text("Log in using Gmail", fontWeight = FontWeight.Bold)
                 }
             },
             text = {
                 Column {
                     Text(
-                        "Sparkle Connect checks if your Google account was previously recorded in the database.",
+                        "Enter your Gmail address. Sparkle Connect automatically fetches your name and configures access — you don't need to create a password to use the app! Your profile is saved directly to the database.",
                         style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    Text("Select or enter your Google email:", style = MaterialTheme.typography.labelSmall)
+                    Text("Enter Gmail address:", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
                     Spacer(modifier = Modifier.height(6.dp))
 
                     OutlinedTextField(
@@ -938,9 +829,12 @@ fun AuthScreen(
                         onValueChange = {
                             googleEmailInput = it
                             googleSignInError = null
-                            notRegisteredGoogleEmail = null
                         },
-                        label = { Text("Google Account Email") },
+                        label = { Text("Gmail Address") },
+                        placeholder = { Text("e.g. holdstonez@gmail.com") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Email, contentDescription = null, tint = SparklePurple)
+                        },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
@@ -948,44 +842,23 @@ fun AuthScreen(
                             .testTag("google_email_signin_input")
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
-                        "Previously recorded Google accounts:",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    val googleAccounts = registeredAccounts.filter { !it.googleEmail.isNullOrBlank() }
-                    if (googleAccounts.isEmpty()) {
-                        Text(
-                            "No Google accounts recorded yet.",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        )
-                    } else {
-                        googleAccounts.forEach { acc ->
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 2.dp)
-                                    .clickable {
-                                        googleEmailInput = acc.googleEmail ?: acc.email
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "${acc.profile.displayName} (${acc.googleEmail})",
-                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium)
-                                    )
-                                }
-                            }
-                        }
+                    // One-tap Device Google Account
+                    OutlinedButton(
+                        onClick = {
+                            onLaunchCredentialManagerGoogle()
+                            showGoogleSignInDialog = false
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Fingerprint, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Use Device Google Account (One-Tap)", fontSize = 12.sp)
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     googleSignInError?.let { err ->
                         Spacer(modifier = Modifier.height(10.dp))
@@ -1004,39 +877,26 @@ fun AuthScreen(
                             )
                         }
                     }
-
-                    if (notRegisteredGoogleEmail != null) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Button(
-                            onClick = {
-                                showGoogleSignInDialog = false
-                                googleSignUpEmail = notRegisteredGoogleEmail!!
-                                googleSignUpRealName = notRegisteredGoogleEmail!!.substringBefore("@").replace(".", " ").capitalize()
-                                showGoogleSignUpDialog = true
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = SparkleOrange),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Create Account with this Google Email", fontWeight = FontWeight.Bold)
-                        }
-                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val res = onGoogleSignIn(googleEmailInput)
+                        val input = googleEmailInput.trim()
+                        if (input.isBlank() || !input.contains("@")) {
+                            googleSignInError = "Please enter a valid Gmail address (e.g. name@gmail.com)"
+                            return@Button
+                        }
+                        val res = onGoogleSignIn(input)
                         if (res.isSuccess) {
                             showGoogleSignInDialog = false
                         } else {
-                            googleSignInError = res.exceptionOrNull()?.message
-                            notRegisteredGoogleEmail = googleEmailInput
+                            googleSignInError = res.exceptionOrNull()?.message ?: "Failed to log in with Gmail"
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SparklePurple)
                 ) {
-                    Text("Verify & Sign In")
+                    Text("Log in with Gmail (No Password Needed)")
                 }
             },
             dismissButton = {
