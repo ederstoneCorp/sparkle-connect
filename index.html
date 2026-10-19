@@ -21,6 +21,16 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
+  <!-- PWA & Fullscreen Meta Tags -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Sparkle Connect" />
+
+  <!-- Leaflet CSS & JS for Kenya Campus Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <!-- Supabase JS Client CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -99,31 +109,36 @@
         </div>
       </div>
 
-      <!-- University Selector -->
-      <div class="flex-1 max-w-xs hidden md:block">
-        <div class="relative">
-          <i data-lucide="graduation-cap" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-          <select id="univ-filter" onchange="filterByUniversity(this.value)"
-            class="w-full pl-9 pr-8 py-2 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400/30 appearance-none cursor-pointer">
-            <option value="ALL">All Kenyan Campuses</option>
-            <option value="UoN">University of Nairobi (UoN)</option>
-            <option value="KU">Kenyatta University (KU)</option>
-            <option value="Strathmore">Strathmore University</option>
-            <option value="JKUAT">JKUAT — Juja</option>
-            <option value="Moi">Moi University — Eldoret</option>
-            <option value="Egerton">Egerton University — Nakuru</option>
-            <option value="USIU">USIU-Africa — Roysambu</option>
-            <option value="MKU">Mount Kenya University</option>
-            <option value="TUK">Technical University of Kenya</option>
-            <option value="Daystar">Daystar University</option>
-            <option value="Maseno">Maseno University — Kisumu</option>
-          </select>
-          <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-        </div>
+      <!-- University Search Trigger & Map Button (Desktop) -->
+      <div class="flex-1 max-w-sm hidden md:flex items-center gap-2">
+        <button onclick="openUnivSearch()"
+          class="flex-1 flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-sparkle-purple/40 hover:bg-white dark:hover:bg-slate-700 transition-all text-left group">
+          <i data-lucide="graduation-cap" class="w-4 h-4 text-slate-400 group-hover:text-sparkle-purple transition-colors shrink-0"></i>
+          <span id="univ-filter-label" class="flex-1 text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
+            All Kenyan Campuses
+          </span>
+          <span id="univ-filter-clear" onclick="event.stopPropagation(); setUniversity('ALL')" class="hidden p-0.5 rounded text-slate-400 hover:text-rose-500 transition-colors cursor-pointer" title="Clear filter">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </span>
+          <i data-lucide="chevron-down" id="univ-filter-chevron" class="w-3.5 h-3.5 text-slate-300 shrink-0"></i>
+        </button>
+
+        <button onclick="openCampusMap()" title="View campuses on Kenya Map"
+          class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-sparkle-blue hover:border-sparkle-blue/40 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all">
+          <i data-lucide="map" class="w-4 h-4"></i>
+        </button>
       </div>
 
-      <!-- Right: Theme + Notifications + Auth / Profile -->
-      <div class="flex items-center gap-2">
+      <!-- Right: Mobile Search/Map + Theme + Notifications + Auth / Profile -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Mobile search + map buttons -->
+        <button onclick="openUnivSearch()" class="md:hidden p-2 text-slate-500 dark:text-slate-400 hover:text-sparkle-purple hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" aria-label="Search universities">
+          <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+        </button>
+        <button onclick="openCampusMap()" class="md:hidden p-2 text-slate-500 dark:text-slate-400 hover:text-sparkle-blue hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" aria-label="Open campus map">
+          <i data-lucide="map" class="w-5 h-5"></i>
+        </button>
+
         <button onclick="toggleTheme()" id="theme-btn" aria-label="Toggle Theme" class="p-2 text-slate-600 dark:text-slate-300 hover:text-sparkle-purple hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
           <i data-lucide="moon" id="theme-icon" class="w-5 h-5"></i>
         </button>
@@ -644,6 +659,118 @@
         </div>
       </div>
     </div>
+  <!-- ============================================================
+       UNIVERSITY SEARCH MODAL
+  ============================================================ -->
+  <div id="univ-search-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-20 px-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="w-full max-w-2xl bg-white dark:bg-sparkle-darkSurface rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-700/60 overflow-hidden my-4 flex flex-col max-h-[82vh] fade-in">
+      <div class="p-4 border-b border-slate-100 dark:border-slate-700">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sparkle-purple to-sparkle-blue flex items-center justify-center text-white shrink-0">
+              <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 leading-none">Find Your Campus</h3>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">32 registered Kenyan universities &amp; colleges</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="closeUnivSearch(); openCampusMap()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-sparkle-purple hover:text-white transition-all">
+              <i data-lucide="map" class="w-3.5 h-3.5"></i> View Map
+            </button>
+            <button onclick="closeUnivSearch()" class="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          <input id="univ-search-input" type="text" oninput="filterUnivSearch(this.value)" placeholder="Search by name, acronym, county, or type (public/private)..."
+            class="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 text-slate-800 dark:text-slate-100" />
+        </div>
+
+        <button onclick="setUniversity('ALL'); closeUnivSearch()" class="mt-2 w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-sparkle-purple hover:bg-slate-100 dark:hover:bg-slate-700">
+          <span class="flex items-center gap-2"><i data-lucide="globe" class="w-4 h-4 text-sparkle-purple"></i> All Kenyan Campuses (View Everywhere)</span>
+          <span class="text-[10px] text-slate-400 font-normal">Reset filter</span>
+        </button>
+      </div>
+
+      <div id="univ-search-results" class="overflow-y-auto flex-1 p-2 space-y-1">
+        <!-- populated dynamically -->
+      </div>
+
+      <div class="px-4 py-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px] text-slate-400">
+        <span id="univ-count-label">32 universities</span>
+        <button onclick="closeUnivSearch(); openCampusMap()" class="font-bold text-sparkle-purple hover:underline flex items-center gap-1">
+          <i data-lucide="map" class="w-3.5 h-3.5"></i> Open Full Campus Map
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CAMPUS MAP MODAL (LEAFLET INTERACTIVE)
+  ============================================================ -->
+  <div id="campus-map-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
+    <div class="relative w-full max-w-5xl h-[88vh] bg-white dark:bg-sparkle-darkSurface rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col fade-in">
+      <!-- Map Header -->
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sparkle-blue to-sparkle-mint flex items-center justify-center text-white">
+            <i data-lucide="map-pin" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-sm text-slate-900 dark:text-slate-100">Kenyan University Campus Map</h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">Interactive OpenStreetMap &bull; Click markers to explore campus comrades</p>
+          </div>
+        </div>
+        <button onclick="closeCampusMap()" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Map Body (Sidebar + Leaflet Container) -->
+      <div class="flex flex-1 min-h-0 flex-col sm:flex-row">
+        <!-- Sidebar -->
+        <div class="w-full sm:w-80 shrink-0 border-r border-slate-100 dark:border-slate-700 flex flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-900/30">
+          <div class="p-3 border-b border-slate-100 dark:border-slate-700">
+            <div class="relative">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="map-search-input" type="text" oninput="filterMapSidebar(this.value)" placeholder="Search & pan to campus..."
+                class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-sparkle-blue/30 font-medium" />
+            </div>
+          </div>
+          <div id="map-campus-details" class="p-3.5 border-b border-slate-100 dark:border-slate-700 hidden">
+            <!-- selected pin details -->
+          </div>
+          <div class="px-3 py-2 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            <span>Campuses</span>
+            <span class="flex items-center gap-2">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span>Public</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-purple-500"></span>Private</span>
+            </span>
+          </div>
+          <div id="map-campus-list" class="flex-1 overflow-y-auto p-2 space-y-1 text-xs">
+            <!-- campus list -->
+          </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="flex-1 relative min-h-[300px]">
+          <div id="leaflet-map" class="w-full h-full"></div>
+        </div>
+      </div>
+
+      <!-- Map Footer -->
+      <div class="px-5 py-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px] text-slate-400 shrink-0">
+        <span>🗺️ OpenStreetMap &bull; 32 Kenyan University Campuses Mapped</span>
+        <button onclick="setUniversity('ALL'); closeCampusMap()" class="px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 transition-colors">
+          Show All Campuses
+        </button>
+      </div>
+    </div>
   </div>
 
 </div><!-- /#app -->
@@ -935,7 +1062,306 @@ function setTab(tab) {
   if (tab === 'messages') { renderConvList(); updateMsgBadge(); }
 }
 
-function filterByUniversity(v) { univFilter = v; renderPosts(); renderGigs(); renderCommunities(); renderEvents(); }
+// ─── KENYAN UNIVERSITIES & CAMPUSES DATA ────────────────────────
+const KENYA_UNIVERSITIES = [
+  // === PUBLIC NATIONAL UNIVERSITIES ===
+  { id: 'uon', name: 'University of Nairobi', shortName: 'UoN', location: 'Nairobi, Nairobi County', website: 'https://uonbi.ac.ke', lat: -1.2773, lng: 36.8148, type: 'national', founded: 1956, students: 85000 },
+  { id: 'ku', name: 'Kenyatta University', shortName: 'KU', location: 'Kahawa, Nairobi County', website: 'https://ku.ac.ke', lat: -1.1817, lng: 36.9293, type: 'national', founded: 1965, students: 70000 },
+  { id: 'jkuat', name: 'Jomo Kenyatta University of Agriculture & Technology', shortName: 'JKUAT', location: 'Juja, Kiambu County', website: 'https://jkuat.ac.ke', lat: -1.1011, lng: 37.0145, type: 'national', founded: 1994, students: 30000 },
+  { id: 'moi', name: 'Moi University', shortName: 'Moi', location: 'Eldoret, Uasin Gishu County', website: 'https://mu.ac.ke', lat: 0.5337, lng: 35.3018, type: 'national', founded: 1984, students: 50000 },
+  { id: 'egerton', name: 'Egerton University', shortName: 'Egerton', location: 'Njoro, Nakuru County', website: 'https://egerton.ac.ke', lat: -0.3824, lng: 35.8854, type: 'national', founded: 1939, students: 25000 },
+  { id: 'maseno', name: 'Maseno University', shortName: 'Maseno', location: 'Maseno, Kisumu County', website: 'https://maseno.ac.ke', lat: -0.0040, lng: 34.5958, type: 'national', founded: 2001, students: 20000 },
+  { id: 'masinde', name: 'Masinde Muliro University of Science & Technology', shortName: 'MMUST', location: 'Kakamega, Kakamega County', website: 'https://mmust.ac.ke', lat: 0.3524, lng: 34.7532, type: 'national', founded: 2007, students: 15000 },
+  { id: 'kisii', name: 'Kisii University', shortName: 'Kisii Uni', location: 'Kisii, Kisii County', website: 'https://kisiiuniversity.ac.ke', lat: -0.6784, lng: 34.7614, type: 'national', founded: 2013, students: 20000 },
+  { id: 'chuka', name: 'Chuka University', shortName: 'Chuka', location: 'Chuka, Tharaka Nithi County', website: 'https://chuka.ac.ke', lat: -0.3291, lng: 37.6487, type: 'national', founded: 2013, students: 10000 },
+  { id: 'tum', name: 'Technical University of Mombasa', shortName: 'TUM', location: 'Mombasa, Mombasa County', website: 'https://tum.ac.ke', lat: -4.0519, lng: 39.6678, type: 'technical', founded: 2013, students: 15000 },
+  { id: 'tuk', name: 'Technical University of Kenya', shortName: 'TUK', location: 'Nairobi CBD, Nairobi County', website: 'https://tukenya.ac.ke', lat: -1.2954, lng: 36.8215, type: 'technical', founded: 2013, students: 12000 },
+  { id: 'kabianga', name: 'University of Kabianga', shortName: 'Kabianga', location: 'Kericho, Kericho County', website: 'https://kabianga.ac.ke', lat: -0.3597, lng: 35.2782, type: 'national', founded: 2013, students: 8000 },
+  { id: 'laikipia', name: 'Laikipia University', shortName: 'Laikipia', location: 'Nyahururu, Laikipia County', website: 'https://laikipia.ac.ke', lat: 0.0275, lng: 36.3623, type: 'national', founded: 2013, students: 8000 },
+  { id: 'muranga', name: "Murang'a University of Technology", shortName: "MUT", location: "Murang'a, Murang'a County", website: 'https://mut.ac.ke', lat: -0.7188, lng: 37.1532, type: 'technical', founded: 2013, students: 10000 },
+  { id: 'embu', name: 'University of Embu', shortName: 'UoEm', location: 'Embu, Embu County', website: 'https://embuni.ac.ke', lat: -0.5289, lng: 37.4578, type: 'national', founded: 2012, students: 8000 },
+  { id: 'machakos', name: 'Machakos University', shortName: 'MU', location: 'Machakos, Machakos County', website: 'https://mksu.ac.ke', lat: -1.5177, lng: 37.2634, type: 'national', founded: 2016, students: 12000 },
+  { id: 'kirinyaga', name: 'Kirinyaga University', shortName: 'Kirinyaga', location: 'Kutus, Kirinyaga County', website: 'https://kyu.ac.ke', lat: -0.5192, lng: 37.3174, type: 'national', founded: 2016, students: 6000 },
+  { id: 'maasai_mara', name: 'Maasai Mara University', shortName: 'MMU', location: 'Narok, Narok County', website: 'https://mmarau.ac.ke', lat: -1.0872, lng: 35.8716, type: 'national', founded: 2013, students: 7000 },
+  { id: 'south_eastern', name: 'South Eastern Kenya University', shortName: 'SEKU', location: 'Kitui, Kitui County', website: 'https://seku.ac.ke', lat: -1.3625, lng: 38.0106, type: 'national', founded: 2013, students: 10000 },
+  { id: 'pwani', name: 'Pwani University', shortName: 'Pwani', location: 'Kilifi, Kilifi County', website: 'https://pu.ac.ke', lat: -3.6293, lng: 39.8492, type: 'national', founded: 2013, students: 8000 },
+  { id: 'taita_taveta', name: 'Taita Taveta University', shortName: 'TTU', location: 'Voi, Taita Taveta County', website: 'https://ttu.ac.ke', lat: -3.3964, lng: 38.5483, type: 'national', founded: 2016, students: 5000 },
+  { id: 'rongo', name: 'Rongo University', shortName: 'Rongo', location: 'Rongo, Migori County', website: 'https://ron.ac.ke', lat: -0.7957, lng: 34.6178, type: 'national', founded: 2016, students: 5000 },
+  { id: 'garissa', name: 'Garissa University', shortName: 'GU', location: 'Garissa, Garissa County', website: 'https://gu.ac.ke', lat: -0.4557, lng: 42.4794, type: 'national', founded: 2011, students: 3000 },
+  { id: 'koitaleel', name: 'Koitaleel Samoei University College', shortName: 'KSUC', location: 'Nandi County', website: 'https://ksuc.ac.ke', lat: 0.2121, lng: 35.1069, type: 'national', founded: 2016, students: 3000 },
+  // === PRIVATE CHARTERED UNIVERSITIES ===
+  { id: 'strathmore', name: 'Strathmore University', shortName: 'Strathmore', location: 'Madaraka, Nairobi County', website: 'https://strathmore.edu', lat: -1.3043, lng: 36.8067, type: 'private', founded: 2002, students: 10000 },
+  { id: 'usiu', name: 'United States International University Africa', shortName: 'USIU-Africa', location: 'Kasarani, Nairobi County', website: 'https://usiu.ac.ke', lat: -1.2225, lng: 36.8901, type: 'private', founded: 1969, students: 7000 },
+  { id: 'daystar', name: 'Daystar University', shortName: 'Daystar', location: 'Nairobi / Athi River', website: 'https://daystar.ac.ke', lat: -1.3467, lng: 36.8219, type: 'private', founded: 1994, students: 6000 },
+  { id: 'mku', name: 'Mount Kenya University', shortName: 'MKU', location: 'Thika, Kiambu County', website: 'https://mku.ac.ke', lat: -1.0332, lng: 37.0833, type: 'private', founded: 2008, students: 80000 },
+  { id: 'kes', name: 'Kenya Evangelical Divinity School (KES)', shortName: 'KES', location: 'Karen, Nairobi County', website: 'https://kes.ac.ke', lat: -1.3467, lng: 36.7182, type: 'private', founded: 1990, students: 1000 },
+  { id: 'catholic_u', name: 'Catholic University of Eastern Africa', shortName: 'CUEA', location: 'Karen, Nairobi County', website: 'https://cuea.edu', lat: -1.3554, lng: 36.7264, type: 'private', founded: 1992, students: 5000 },
+  { id: 'africana', name: 'Africa Nazarene University', shortName: 'ANU', location: 'Ongata Rongai, Kajiado County', website: 'https://anu.ac.ke', lat: -1.3955, lng: 36.7477, type: 'private', founded: 1994, students: 4000 },
+  { id: 'adventist', name: 'Adventist University of Africa', shortName: 'AUA', location: 'Ongata Rongai, Kajiado County', website: 'https://aua.ac.ke', lat: -1.4022, lng: 36.7432, type: 'private', founded: 2011, students: 2000 },
+];
+
+function getUniversity(id) {
+  if (!id || id === 'ALL') return null;
+  return KENYA_UNIVERSITIES.find(u => u.id === id || u.shortName.toLowerCase() === id.toLowerCase() || u.name.toLowerCase() === id.toLowerCase()) || null;
+}
+
+function setUniversity(id) {
+  univFilter = id;
+  const u = getUniversity(id);
+  const label = document.getElementById('univ-filter-label');
+  const clearBtn = document.getElementById('univ-filter-clear');
+  const chevron = document.getElementById('univ-filter-chevron');
+
+  if (label) {
+    label.textContent = u ? u.name : 'All Kenyan Campuses';
+  }
+  if (clearBtn && chevron) {
+    if (id === 'ALL') {
+      clearBtn.classList.add('hidden');
+      chevron.classList.remove('hidden');
+    } else {
+      clearBtn.classList.remove('hidden');
+      chevron.classList.add('hidden');
+    }
+  }
+
+  renderPosts();
+  renderGigs();
+  renderCommunities();
+  renderEvents();
+}
+
+function filterByUniversity(v) {
+  setUniversity(v);
+}
+
+// ─── UNIVERSITY SEARCH MODAL HANDLERS ─────────────────────────
+function openUnivSearch() {
+  document.getElementById('univ-search-modal').classList.remove('hidden');
+  document.getElementById('univ-search-input').value = '';
+  filterUnivSearch('');
+  setTimeout(() => document.getElementById('univ-search-input')?.focus(), 60);
+  lucide.createIcons();
+}
+
+function closeUnivSearch() {
+  document.getElementById('univ-search-modal').classList.add('hidden');
+}
+
+function filterUnivSearch(query) {
+  const q = (query || '').toLowerCase().trim();
+  const filtered = q
+    ? KENYA_UNIVERSITIES.filter(u =>
+        u.name.toLowerCase().includes(q) ||
+        u.shortName.toLowerCase().includes(q) ||
+        u.location.toLowerCase().includes(q) ||
+        (u.type && u.type.toLowerCase().includes(q))
+      )
+    : KENYA_UNIVERSITIES;
+
+  renderUnivSearchResults(filtered);
+}
+
+function renderUnivSearchResults(list) {
+  const container = document.getElementById('univ-search-results');
+  const countLabel = document.getElementById('univ-count-label');
+  if (countLabel) countLabel.textContent = `${list.length} of ${KENYA_UNIVERSITIES.length} universities`;
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="py-12 text-center">
+        <i data-lucide="graduation-cap" class="w-10 h-10 text-slate-300 mx-auto mb-2"></i>
+        <p class="font-bold text-sm text-slate-700 dark:text-slate-200">No matching university</p>
+        <p class="text-xs text-slate-400 mt-1">Try another keyword or view the full campus map.</p>
+        <button onclick="closeUnivSearch(); openCampusMap()" class="mt-3 px-4 py-2 rounded-xl bg-sparkle-purple text-white text-xs font-bold">
+          Open Kenya Map View
+        </button>
+      </div>`;
+    lucide.createIcons();
+    return;
+  }
+
+  const typeLabels = {
+    national: '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">Public</span>',
+    technical: '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">Technical</span>',
+    private: '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">Private</span>'
+  };
+
+  container.innerHTML = list.map(u => {
+    const isSelected = univFilter === u.id || univFilter === u.shortName;
+    return `
+      <div onclick="setUniversity('${u.id}'); closeUnivSearch()"
+        class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl cursor-pointer transition-all border ${
+          isSelected
+            ? 'bg-sparkle-purple/10 dark:bg-sparkle-purple/20 border-sparkle-purple text-sparkle-purple'
+            : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
+        }">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-black ${
+          isSelected ? 'bg-sparkle-purple text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+        }">
+          ${u.shortName.slice(0, 2)}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="text-xs font-extrabold text-slate-900 dark:text-slate-100 truncate max-w-[240px]">${u.name}</p>
+            ${typeLabels[u.type] || ''}
+          </div>
+          <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
+            <span>📍 ${u.location}</span>
+            ${u.students ? `<span>• 👥 ${u.students.toLocaleString()} students</span>` : ''}
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          ${u.website ? `<a href="${u.website}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="p-1.5 rounded-lg text-slate-400 hover:text-sparkle-blue" title="Open Website"><i data-lucide="external-link" class="w-3.5 h-3.5"></i></a>` : ''}
+          ${isSelected ? '<i data-lucide="check-circle-2" class="w-4 h-4 text-sparkle-purple"></i>' : '<i data-lucide="chevron-right" class="w-4 h-4 text-slate-300"></i>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+  lucide.createIcons();
+}
+
+// ─── CAMPUS MAP MODAL HANDLERS (LEAFLET) ──────────────────────
+let leafletMapInstance = null;
+let leafletMarkers = [];
+
+function openCampusMap() {
+  document.getElementById('campus-map-modal').classList.remove('hidden');
+  renderMapCampusList(KENYA_UNIVERSITIES);
+  setTimeout(() => initCampusMap(), 150);
+  lucide.createIcons();
+}
+
+function closeCampusMap() {
+  document.getElementById('campus-map-modal').classList.add('hidden');
+}
+
+function initCampusMap() {
+  if (leafletMapInstance) {
+    leafletMapInstance.invalidateSize();
+    return;
+  }
+  const el = document.getElementById('leaflet-map');
+  if (!el || typeof L === 'undefined') return;
+
+  leafletMapInstance = L.map(el, {
+    center: [-0.5, 37.5], // Center of Kenya
+    zoom: 6,
+    scrollWheelZoom: true,
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 18,
+  }).addTo(leafletMapInstance);
+
+  const typeColors = {
+    national: '#3B82F6', // Blue
+    technical: '#F59E0B', // Amber
+    private: '#8B5CF6',  // Purple
+  };
+
+  leafletMarkers = [];
+
+  KENYA_UNIVERSITIES.forEach(u => {
+    if (!u.lat || !u.lng) return;
+    const color = typeColors[u.type] || '#6C3BFF';
+    const isSelected = univFilter === u.id || univFilter === u.shortName;
+
+    const marker = L.circleMarker([u.lat, u.lng], {
+      radius: isSelected ? 12 : 9,
+      fillColor: color,
+      color: '#ffffff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.85,
+    }).addTo(leafletMapInstance);
+
+    marker.bindTooltip(`<strong>${u.shortName}</strong><br><span style="font-size:11px">${u.location}</span>`, {
+      direction: 'top',
+      offset: [0, -8],
+    });
+
+    marker.on('click', () => {
+      selectMapCampus(u.id);
+    });
+
+    leafletMarkers.push({ id: u.id, marker });
+  });
+
+  // If already filtered, pan to that campus
+  if (univFilter !== 'ALL') {
+    selectMapCampus(univFilter);
+  }
+}
+
+function selectMapCampus(id) {
+  const u = getUniversity(id);
+  if (!u) return;
+
+  const detailBox = document.getElementById('map-campus-details');
+  if (detailBox) {
+    detailBox.classList.remove('hidden');
+    detailBox.innerHTML = `
+      <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-sparkle-purple/30 shadow-xs">
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <div>
+            <h4 class="font-extrabold text-xs text-slate-900 dark:text-slate-100">${u.name}</h4>
+            <p class="text-[10px] text-sparkle-purple font-semibold">${u.shortName} &bull; ${u.type || 'University'}</p>
+          </div>
+          <button onclick="document.getElementById('map-campus-details').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-2">📍 ${u.location} ${u.students ? `&bull; 👥 ${u.students.toLocaleString()} students` : ''}</p>
+        <div class="flex gap-2">
+          <button onclick="setUniversity('${u.id}'); closeCampusMap()" class="flex-1 py-1.5 px-2 bg-sparkle-purple text-white text-[11px] font-bold rounded-xl hover:bg-sparkle-purple-dark transition-colors">
+            Filter Feeds by ${u.shortName}
+          </button>
+          ${u.website ? `<a href="${u.website}" target="_blank" rel="noopener noreferrer" class="py-1.5 px-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-bold rounded-xl hover:bg-slate-200 transition-colors">Website</a>` : ''}
+        </div>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+
+  if (leafletMapInstance && u.lat && u.lng) {
+    leafletMapInstance.flyTo([u.lat, u.lng], 13, { duration: 1.2 });
+  }
+}
+
+function filterMapSidebar(query) {
+  const q = (query || '').toLowerCase().trim();
+  const filtered = q
+    ? KENYA_UNIVERSITIES.filter(u => u.name.toLowerCase().includes(q) || u.shortName.toLowerCase().includes(q) || u.location.toLowerCase().includes(q))
+    : KENYA_UNIVERSITIES;
+
+  renderMapCampusList(filtered);
+}
+
+function renderMapCampusList(list) {
+  const container = document.getElementById('map-campus-list');
+  if (!container) return;
+
+  const typeDots = {
+    national: 'bg-blue-500',
+    technical: 'bg-amber-500',
+    private: 'bg-purple-500'
+  };
+
+  container.innerHTML = list.map(u => `
+    <button onclick="selectMapCampus('${u.id}')"
+      class="w-full flex items-center justify-between p-2 rounded-xl text-left hover:bg-white dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="w-2.5 h-2.5 rounded-full shrink-0 ${typeDots[u.type] || 'bg-sparkle-purple'}"></span>
+        <span class="font-bold text-slate-800 dark:text-slate-200 truncate">${u.shortName}</span>
+        <span class="text-[10px] text-slate-400 truncate">${u.location.split(',')[0]}</span>
+      </div>
+      <i data-lucide="crosshair" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+    </button>
+  `).join('');
+  lucide.createIcons();
+}
 
 // ─── FEED ───────────────────────────────────────────────────────
 function setFeedCat(cat) {
@@ -949,13 +1375,19 @@ function setFeedCat(cat) {
 
 function renderPosts() {
   const q = (document.getElementById('feed-search')?.value||'').toLowerCase();
+  const uObj = getUniversity(univFilter);
+
   const posts = state.posts.filter(p => {
     if (feedCat !== 'ALL' && p.category !== feedCat) return false;
+    if (uObj && !p.isAnonymous) {
+      const uStr = (p.authorUniversity || '').toLowerCase();
+      if (!uStr.includes(uObj.shortName.toLowerCase()) && !uStr.includes(uObj.name.toLowerCase())) return false;
+    }
     if (q && !p.content.toLowerCase().includes(q) && !p.authorName.toLowerCase().includes(q) && !(p.tags||[]).some(t=>t.includes(q))) return false;
     return true;
   });
   const c = document.getElementById('posts-container');
-  if (posts.length === 0) { c.innerHTML = emptyState('flame','No campus posts found','Be the first to share an update!'); return; }
+  if (posts.length === 0) { c.innerHTML = emptyState('flame','No campus posts found','Be the first to share an update or change campus filter!'); return; }
   c.innerHTML = posts.map(postCard).join('');
   lucide.createIcons();
 }
@@ -1053,8 +1485,13 @@ function setGigCat(cat) {
 
 function renderGigs() {
   const q = (document.getElementById('gig-search')?.value||'').toLowerCase();
+  const uObj = getUniversity(univFilter);
   const gigs = state.gigs.filter(g => {
     if (gigCat !== 'ALL' && !g.category.toLowerCase().includes(gigCat.toLowerCase())) return false;
+    if (uObj) {
+      const uStr = (g.publisherUniversity || g.clientUniversity || '').toLowerCase();
+      if (!uStr.includes(uObj.shortName.toLowerCase()) && !uStr.includes(uObj.name.toLowerCase())) return false;
+    }
     if (q && !g.title.toLowerCase().includes(q) && !g.description.toLowerCase().includes(q) && !(g.skillsRequired||[]).some(s=>s.toLowerCase().includes(q))) return false;
     return true;
   });
@@ -1511,6 +1948,36 @@ function initSupabaseSync() {
     console.log('Supabase sync initialized in offline fallback mode.');
   }
 }
+
+// ─── FULLSCREEN & IMMERSIVE TRIGGER ─────────────────────────────
+(function initAutoFullscreen() {
+  let hasTriggered = false;
+  function triggerFullscreen() {
+    if (hasTriggered) return;
+    hasTriggered = true;
+    const el = document.documentElement;
+    const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (rfs) {
+      rfs.call(el).catch(() => {});
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', triggerFullscreen);
+  } else {
+    triggerFullscreen();
+  }
+
+  ['click', 'touchstart', 'keydown'].forEach(evt => {
+    document.addEventListener(evt, triggerFullscreen, { once: true, passive: true });
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      hasTriggered = false;
+    }
+  });
+})();
 </script>
 </body>
 </html>

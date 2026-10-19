@@ -2,16 +2,104 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ─── PWA / Fullscreen Configuration ─────────────────────────────────── -->
+    <!-- Makes the app launch in standalone/fullscreen mode when installed as PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- iOS Safari fullscreen (hides Safari browser chrome) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Sparkle Connect" />
+    <!-- Windows / IE fullscreen tile -->
+    <meta name="msapplication-navbutton-color" content="#6C3BFF" />
+    <meta name="msapplication-starturl" content="/" />
+    <meta name="theme-color" content="#6C3BFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#11101B" media="(prefers-color-scheme: dark)" />
+
+    <!-- ─── App Identity ────────────────────────────────────────────────────── -->
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sparkle Connect | Kenya Campus Network & Gigs</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-yDlrpPys.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D-pp7vsY.css">
+    <title>Sparkle Connect | Kenya Campus Network &amp; Gigs</title>
+    <meta name="description" content="Sparkle Connect — the social network for Kenyan university students. Campus feeds, student gigs, confessions, and peer connections." />
+
+    <!-- ─── Fonts ───────────────────────────────────────────────────────────── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- ─── Fullscreen & Body Base Styles ───────────────────────────────────── -->
+    <style>
+      /* Prevent pull-to-refresh and overscroll bounce on mobile */
+      html, body {
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      /* Hide scrollbar during initial load flash */
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      /* Safe area inset support for devices with notches / home indicators */
+      #root {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        min-height: 100dvh;
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-BRTLcsZ6.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DX04BFQy.css">
   </head>
   <body class="bg-[#F7F7FC] text-[#19172B] antialiased selection:bg-purple-500 selection:text-white">
     <div id="root"></div>
+
+    <!-- ─── Auto-Fullscreen on Load (Fullscreen API) ─────────────────────────
+         Triggers on a user gesture (first click anywhere) since browsers require
+         a user interaction before entering fullscreen.
+    ──────────────────────────────────────────────────────────────────────────── -->
+    <script>
+      (function () {
+        var triggered = false;
+
+        function requestFS() {
+          if (triggered) return;
+          triggered = true;
+
+          var el = document.documentElement;
+          var rfs =
+            el.requestFullscreen ||
+            el.webkitRequestFullscreen ||
+            el.mozRequestFullScreen ||
+            el.msRequestFullscreen;
+
+          if (rfs) {
+            rfs.call(el).catch(function () {
+              // Silently fail — some browsers block fullscreen on non-https
+            });
+          }
+        }
+
+        // Try immediately (works in some contexts like installed PWAs)
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', requestFS);
+        } else {
+          requestFS();
+        }
+
+        // Fallback: trigger on first user interaction
+        ['click', 'touchstart', 'keydown'].forEach(function (evt) {
+          document.addEventListener(evt, requestFS, { once: true, passive: true });
+        });
+
+        // Re-enter fullscreen if user exits via Esc (optional — comment out if unwanted)
+        document.addEventListener('fullscreenchange', function () {
+          if (!document.fullscreenElement) {
+            triggered = false; // allow re-trigger on next interaction
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

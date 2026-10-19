@@ -5,6 +5,11 @@ export interface University {
   location: string;
   website?: string;
   logoUrl?: string;
+  lat?: number;
+  lng?: number;
+  type?: 'public' | 'private' | 'technical' | 'national';
+  founded?: number;
+  students?: number;
 }
 
 export interface StudentProfile {

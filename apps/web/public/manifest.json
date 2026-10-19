@@ -1,0 +1,23 @@
+{
+  "name": "Sparkle Connect",
+  "short_name": "Sparkle",
+  "description": "Kenyan University Campus Network & Student Gigs",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "portrait-primary",
+  "background_color": "#6C3BFF",
+  "theme_color": "#6C3BFF",
+  "lang": "en",
+  "categories": ["social", "education"],
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
