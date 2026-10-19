@@ -90,8 +90,8 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const parsed = JSON.parse(saved);
         return {
           accounts: [],
-          currentUser: parsed.currentUser || null,
-          currentAccountId: parsed.currentAccountId || null,
+          currentUser: null,
+          currentAccountId: null,
           posts: parsed.posts || INITIAL_POSTS,
           gigs: parsed.gigs || INITIAL_GIGS,
           communities: parsed.communities || INITIAL_COMMUNITIES,
@@ -100,7 +100,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           notifications: parsed.notifications || INITIAL_NOTIFICATIONS,
           selectedUniversityId: 'ALL',
           activeTab: 'feed',
-          isAuthModalOpen: !parsed.currentUser,
+          isAuthModalOpen: true,
           isProfileModalOpen: false,
           isNotificationsOpen: false,
         };
@@ -131,8 +131,6 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     try {
       const dataToSave = {
-        currentUser: state.currentUser,
-        currentAccountId: state.currentAccountId,
         posts: state.posts,
         gigs: state.gigs,
         communities: state.communities,
