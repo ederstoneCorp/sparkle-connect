@@ -16,7 +16,6 @@ import {
 } from '../types/models';
 import {
   UNIVERSITIES,
-  INITIAL_ACCOUNTS,
   INITIAL_POSTS,
   INITIAL_GIGS,
   INITIAL_COMMUNITIES,
