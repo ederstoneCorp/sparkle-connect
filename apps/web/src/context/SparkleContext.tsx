@@ -292,7 +292,14 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         supabase.from('universities').select('id, short_name'),
       ]);
       if (!active) return;
-      const profileById = new Map<string, any>((profiles || []).map((profile: any) => [profile.id, profile] as [string, any]));
+      const commentAuthorIds = [...new Set((comments || []).map((comment: any) => comment.author_id))];
+      const knownProfileIds = new Set((profiles || []).map((profile: any) => profile.id));
+      const missingCommentAuthorIds = commentAuthorIds.filter((id: string) => !knownProfileIds.has(id));
+      const { data: commentProfiles } = missingCommentAuthorIds.length
+        ? await supabase.from('profiles').select('id, display_name, avatar_url, course, is_verified_student, university_id').in('id', missingCommentAuthorIds)
+        : { data: [] };
+      if (!active) return;
+      const profileById = new Map<string, any>([...(profiles || []), ...(commentProfiles || [])].map((profile: any) => [profile.id, profile] as [string, any]));
       const universityById = new Map<string, string>((universities || []).map((university: any) => [university.id, university.short_name] as [string, string]));
       const commentsByPost = new Map<string, any[]>();
       (comments || []).forEach((comment: any) => {
