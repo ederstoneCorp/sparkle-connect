@@ -43,17 +43,17 @@ export const MessagesScreen: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden h-[calc(100vh-140px)] min-h-[500px] flex">
+    <div className="bg-white dark:bg-sparkle-darkSurface rounded-3xl border border-slate-200/80 dark:border-slate-700/60 shadow-xs overflow-hidden h-[calc(100vh-140px)] min-h-[500px] flex">
       
       {/* Conversations List (Pane 1) */}
       <div
-        className={`w-full md:w-80 lg:w-96 border-r border-slate-200/80 flex flex-col ${
+        className={`w-full md:w-80 lg:w-96 border-r border-slate-200/80 dark:border-slate-700/60 flex flex-col ${
           mobileViewingChat ? 'hidden md:flex' : 'flex'
         }`}
       >
-        <div className="p-4 border-b border-slate-100 space-y-3">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-700 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-extrabold text-base text-slate-900">Direct Messages</h2>
+            <h2 className="font-extrabold text-base text-slate-900 dark:text-slate-100">Direct Messages</h2>
             <span className="text-xs px-2 py-0.5 rounded-full bg-sparkle-purple/10 text-sparkle-purple font-bold">
               {conversations.length} Active
             </span>
@@ -66,13 +66,13 @@ export const MessagesScreen: React.FC = () => {
               placeholder="Search chats..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 font-medium"
+              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 font-medium dark:text-slate-100"
             />
           </div>
         </div>
 
         {/* List items */}
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
           {filteredConversations.map((conv) => {
             const isSelected = conv.id === activeConversationId;
 
@@ -84,14 +84,14 @@ export const MessagesScreen: React.FC = () => {
                   setMobileViewingChat(true);
                 }}
                 className={`w-full p-4 flex items-start gap-3 text-left transition-colors ${
-                  isSelected ? 'bg-sparkle-purple/5' : 'hover:bg-slate-50'
+                  isSelected ? 'bg-sparkle-purple/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="relative">
                   <img
                     src={conv.participantAvatar}
                     alt={conv.participantName}
-                    className="w-11 h-11 rounded-full bg-slate-100 object-cover"
+                    className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 object-cover"
                   />
                   {conv.unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-sparkle-purple text-white text-[10px] font-bold flex items-center justify-center">
@@ -102,7 +102,7 @@ export const MessagesScreen: React.FC = () => {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="font-extrabold text-xs text-slate-900 truncate">
+                    <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 truncate">
                       {conv.participantName}
                     </span>
                     <span className="text-[10px] text-slate-400 shrink-0">{conv.lastMessageTime}</span>
@@ -139,7 +139,7 @@ export const MessagesScreen: React.FC = () => {
                 <img
                   src={activeConversation.participantAvatar}
                   alt={activeConversation.participantName}
-                  className="w-10 h-10 rounded-full bg-slate-100 object-cover"
+                  className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 object-cover"
                 />
 
                 <div>
