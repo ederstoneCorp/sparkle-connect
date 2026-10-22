@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SparkleProvider, useSparkle } from './context/SparkleContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
+import { RightSecondaryWidgets } from './components/layout/RightSecondaryWidgets';
 import { BottomNav } from './components/layout/BottomNav';
 import { FeedScreen } from './components/screens/FeedScreen';
 import { GigsScreen } from './components/screens/GigsScreen';
@@ -72,6 +73,9 @@ const MainLayout: React.FC = () => {
         <section className="flex-1 min-w-0">
           {renderActiveScreen()}
         </section>
+
+        {/* Android desktop/tablet companion rail: events, gigs, communities and profile shortcuts */}
+        <RightSecondaryWidgets />
       </main>
 
       {/* Mobile Bottom Navigation */}
