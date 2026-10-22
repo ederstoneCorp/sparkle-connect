@@ -7,9 +7,11 @@ Sparkle Connect is a platform designed specifically for Kenyan university studen
 
 ## ✨ Features Across Mobile & Web
 
-- 🔐 **Dual Authentication & Instant Gmail Login**:
-  - Sign up with university email or standard credentials.
-  - **Gmail Instant Login**: Log in with Gmail; automatically fetches your name, generates a safe token, and saves your profile to the database without requiring manual password creation.
+- 🔐 **Authentication**
+  - Web: Supabase Auth email/password registration and Google OAuth sign-in.
+  - Android: native authentication flows using Firebase Auth / Android Credential Manager.
+  - Email confirmation and password recovery are supported by the web flow when configured in Supabase.
+  - **Important:** Android and web authentication/backend providers are not yet unified, so cross-platform accounts and content should not be assumed to sync.
 - 💬 **Campus Feed & Secret Confessions**:
   - Filter feeds by university or browse national discussions.
   - Category tags: *Campus Life*, *Tech & Devs*, *Academics*, *Career*, *Hustles*.
@@ -32,6 +34,14 @@ Sparkle Connect is a platform designed specifically for Kenyan university studen
 
 ---
 
+## Current implementation status
+
+Sparkle Connect has a native Android application and a responsive web application, but feature parity is still in progress. The web login/profile flows use Supabase Auth and the profile table; several social actions and Campus Moments are currently browser-local. Android uses Firebase/Room, so a shared cross-platform data layer is still required before posts, messages, gigs, moments, and profiles can be guaranteed to synchronize between platforms.
+
+Production authentication also requires the Google OAuth client, Supabase provider settings, redirect allowlists, email confirmation templates, and database migrations to be configured in the intended Supabase project.
+
+---
+
 ## 🛠️ Project Architecture
 
 ```
@@ -45,7 +55,7 @@ Sparkle Connect/
 ├── apps/web/             # Responsive Web Application (React 19, TypeScript, Vite, TailwindCSS)
 │   ├── src/
 │   │   ├── components/   # Layout (Navbar, Sidebar, BottomNav), Screens, Modals
-│   │   ├── context/      # SparkleContext (State, LocalStorage sync, Gmail auth)
+│   │   ├── context/      # SparkleContext (Supabase Auth, profile state, browser-local UI state)
 │   │   ├── lib/          # Initial seed data, Supabase client
 │   │   └── types/        # TypeScript interfaces matching Android Room schema
 │   ├── dist/             # Production build output ready for deployment

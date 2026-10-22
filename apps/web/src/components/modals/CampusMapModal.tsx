@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSparkle } from '../../context/SparkleContext';
 import { University } from '../../types/models';
 import { X, MapPin, Users, Globe, ExternalLink, Search, CheckCircle2 } from 'lucide-react';

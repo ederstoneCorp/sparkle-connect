@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSparkle } from '../../context/SparkleContext';
 import { PostCategory } from '../../types/models';
 import { PostCard } from '../feed/PostCard';
+import { MomentsStrip } from '../feed/MomentsStrip';
 import {
   Flame,
   Heart,
@@ -119,6 +120,9 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onOpenCreatePost }) => {
           <span>What's on your mind?</span>
         </button>
       </div>
+
+      {/* 24-hour student stories, matching the Android Moments section */}
+      <MomentsStrip />
 
       {/* Category Pills */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 animate-fade-in">
