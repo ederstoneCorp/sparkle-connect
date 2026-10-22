@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSparkle } from '../../context/SparkleContext';
 import {
   X,
@@ -22,10 +22,37 @@ export const ProfileModal: React.FC = () => {
     currentUser,
     signOut,
     updateCourse,
+    updateProfile,
   } = useSparkle();
 
   const [isAvatarEditOpen, setIsAvatarEditOpen] = useState(false);
   const [isCourseSearchOpen, setIsCourseSearchOpen] = useState(false);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editBio, setEditBio] = useState('');
+  const [editFaculty, setEditFaculty] = useState('');
+  const [editYear, setEditYear] = useState(1);
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    setEditBio(currentUser.bio);
+    setEditFaculty(currentUser.faculty);
+    setEditYear(currentUser.yearOfStudy);
+  }, [currentUser]);
+
+  const handleSaveProfileDetails = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setProfileSaveError(null);
+    setIsSavingProfile(true);
+    const result = await updateProfile({ bio: editBio, faculty: editFaculty, yearOfStudy: editYear });
+    setIsSavingProfile(false);
+    if (!result.success) {
+      setProfileSaveError(result.error || 'Could not save profile details.');
+      return;
+    }
+    setIsEditingDetails(false);
+  };
 
   if (!isProfileModalOpen || !currentUser) return null;
 
@@ -98,10 +125,39 @@ export const ProfileModal: React.FC = () => {
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">{currentUser.bio}</p>
             <p className="text-[11px] text-slate-500 dark:text-slate-500 flex items-center gap-1">
               <Mail className="w-3 h-3" />{currentUser.email}
             </p>
+            {isEditingDetails ? (
+              <form onSubmit={handleSaveProfileDetails} className="mt-3 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
+                <div>
+                  <label htmlFor="profile-bio" className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-300">Bio</label>
+                  <textarea id="profile-bio" rows={3} maxLength={300} value={editBio} onChange={(event) => setEditBio(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs outline-none focus:ring-2 focus:ring-sparkle-purple/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+                </div>
+                <div>
+                  <label htmlFor="profile-faculty" className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-300">Faculty / School</label>
+                  <input id="profile-faculty" value={editFaculty} onChange={(event) => setEditFaculty(event.target.value)} maxLength={150} className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs outline-none focus:ring-2 focus:ring-sparkle-purple/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+                </div>
+                <div>
+                  <label htmlFor="profile-year" className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-300">Year of study</label>
+                  <select id="profile-year" value={editYear} onChange={(event) => setEditYear(Number(event.target.value))} className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                    {[1, 2, 3, 4, 5, 6, 7].map((year) => <option key={year} value={year}>Year {year}</option>)}
+                  </select>
+                </div>
+                {profileSaveError && <p role="alert" className="text-[11px] font-semibold text-rose-600">{profileSaveError}</p>}
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => { setIsEditingDetails(false); setProfileSaveError(null); }} className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold dark:border-slate-700">Cancel</button>
+                  <button type="submit" disabled={isSavingProfile} className="flex-1 rounded-xl bg-sparkle-purple px-3 py-2 text-xs font-extrabold text-white disabled:opacity-50">{isSavingProfile ? 'Saving...' : 'Save changes'}</button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">{currentUser.bio}</p>
+                <button type="button" onClick={() => { setEditBio(currentUser.bio); setEditFaculty(currentUser.faculty); setEditYear(currentUser.yearOfStudy); setIsEditingDetails(true); }} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-sparkle-purple/10 px-2.5 py-1.5 text-[10px] font-bold text-sparkle-purple hover:bg-sparkle-purple/15">
+                  <Edit3 className="h-3 w-3" /> Edit profile details
+                </button>
+              </>
+            )}
           </div>
 
           {/* University Details Card */}
