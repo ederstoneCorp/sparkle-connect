@@ -286,10 +286,10 @@ export const CampusMapModal: React.FC<CampusMapModalProps> = ({
         </div>
 
         {/* Body: Map + Sidebar */}
-        <div className="flex flex-1 min-h-0">
+        <div className="flex flex-col md:flex-row flex-1 min-h-0">
 
           {/* Left sidebar */}
-          <div className="w-72 shrink-0 flex flex-col border-r border-slate-100 dark:border-slate-700 overflow-hidden">
+          <div className="w-full md:w-72 md:shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 overflow-y-auto md:overflow-hidden max-h-[44%] md:max-h-none">
             {/* Map search */}
             <div className="p-3 border-b border-slate-100 dark:border-slate-700">
               <div className="relative">
