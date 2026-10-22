@@ -106,6 +106,21 @@ interface SparkleContextType extends SparkleState {
 const STORAGE_KEY = 'sparkle_connect_local_v2';
 const isCloudPostId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 
+const formatTimeAgo = (timestamp?: number | string | null): string => {
+  if (timestamp === null || timestamp === undefined || timestamp === '') return 'Just now';
+  const time = typeof timestamp === 'number' ? timestamp : Date.parse(timestamp);
+  if (!Number.isFinite(time)) return 'Just now';
+  const seconds = Math.max(0, Math.floor((Date.now() - time) / 1000));
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(time).toLocaleDateString();
+};
+
 const SparkleContext = createContext<SparkleContextType | undefined>(undefined);
 
 export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -187,6 +202,31 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     state.moments,
   ]);
 
+  useEffect(() => {
+    const refreshRelativeTimes = () => {
+      setState((prev) => {
+        let changed = false;
+        const posts = prev.posts.map((post) => {
+          if (!post.createdAtTimestamp) return post;
+          const timeAgo = formatTimeAgo(post.createdAtTimestamp);
+          const comments = post.comments.map((comment) => {
+            if (!comment.createdAtTimestamp) return comment;
+            const commentTimeAgo = formatTimeAgo(comment.createdAtTimestamp);
+            if (comment.timeAgo === commentTimeAgo) return comment;
+            changed = true;
+            return { ...comment, timeAgo: commentTimeAgo };
+          });
+          if (post.timeAgo === timeAgo && comments.every((comment, index) => comment === post.comments[index])) return post;
+          changed = true;
+          return { ...post, timeAgo, comments };
+        });
+        return changed ? { ...prev, posts } : prev;
+      });
+    };
+    const timer = window.setInterval(refreshRelativeTimes, 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const addMoment = (caption: string, backgroundColorHex: string) => {
     if (!state.currentUser || !caption.trim()) return;
     const now = Date.now();
@@ -238,16 +278,18 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Restore the authenticated Supabase session and hydrate the matching cloud profile.
   useEffect(() => {
     let active = true;
-    const hydrate = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string } | null) => {
+    const hydrate = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string; app_metadata?: Record<string, unknown> } | null) => {
       if (!user) {
         if (active) setState((prev) => ({ ...prev, currentUser: null, currentAccountId: null, isAuthModalOpen: true }));
         return;
       }
       try {
-        const profile = await ensureProfile(user);
+        const isGoogleLogin = user.app_metadata?.provider === 'google';
+        const profile = await ensureProfile(user, !isGoogleLogin);
         if (active) setState((prev) => ({ ...prev, currentUser: profile, currentAccountId: user.id, isAuthModalOpen: prev.isPasswordRecovery }));
       } catch (error) {
         console.error('Could not restore Sparkle profile:', error);
+        await supabase.auth.signOut();
         if (active) setState((prev) => ({ ...prev, currentUser: null, currentAccountId: null, isAuthModalOpen: true }));
       }
     };
@@ -321,7 +363,8 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
             authorAvatar: commentAnonymous ? 'https://api.dicebear.com/7.x/bottts/svg?seed=anon' : commentProfile?.avatar_url || '',
             authorUniversity: commentAnonymous ? 'Campus' : String(universityById.get(commentProfile?.university_id) || 'Kenyan Campus'),
             content: comment.content,
-            timeAgo: 'Earlier',
+            timeAgo: formatTimeAgo(comment.created_at),
+            createdAtTimestamp: comment.created_at ? Date.parse(comment.created_at) : undefined,
             isAnonymous: commentAnonymous,
           };
         });
@@ -343,7 +386,8 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           isLikedByMe: likedPostIds.has(row.id),
           isSaved: savedPostIds.has(row.id),
           isSavedByMe: savedPostIds.has(row.id),
-          timeAgo: 'Earlier',
+          timeAgo: formatTimeAgo(row.created_at),
+          createdAtTimestamp: row.created_at ? Date.parse(row.created_at) : undefined,
           comments: postComments,
           mediaUrl: mediaUrls[0],
           images: mediaUrls,
@@ -388,7 +432,8 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
               likesCount: p.likes_count || 0,
               commentsCount: p.comments_count || 0,
               isLikedByMe: false,
-              timeAgo: 'Just now',
+              timeAgo: formatTimeAgo(p.created_at),
+              createdAtTimestamp: p.created_at ? Date.parse(p.created_at) : Date.now(),
               comments: [],
             };
             setState((prev) => {
@@ -477,7 +522,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   };
 
-  const ensureProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string }) => {
+  const ensureProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string; app_metadata?: Record<string, unknown> }, allowCreate = true) => {
     const mapped = profileFromUser(user);
     const { data: existingProfile, error: readError } = await supabase
       .from('profiles')
@@ -487,6 +532,9 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (readError) throw readError;
 
     if (!existingProfile) {
+      if (!allowCreate) {
+        throw new Error('No Sparkle Connect account is registered for this login. Please register first.');
+      }
       const baseUsername = mapped.username.slice(0, 40) || 'student';
       const profilePayload = {
         id: user.id,
@@ -525,7 +573,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     if (error || !data.user) return { success: false, error: error?.message || 'Unable to sign in.' };
     try {
-      const profile = await ensureProfile(data.user);
+      const profile = await ensureProfile(data.user, false);
       setState((prev) => ({ ...prev, currentUser: profile, currentAccountId: data.user.id, isAuthModalOpen: false }));
       return { success: true };
     } catch (profileError) {
@@ -741,7 +789,8 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         visibility,
         commentsDisabled,
         category,
-        timeAgo: 'Just now',
+        timeAgo: formatTimeAgo(data.created_at),
+        createdAtTimestamp: data.created_at ? Date.parse(data.created_at) : Date.now(),
         likesCount: 0,
         commentsCount: 0,
         sharesCount: 0,
