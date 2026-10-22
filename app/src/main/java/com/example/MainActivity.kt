@@ -171,7 +171,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             bottomBar = {
-                                // Show bottom navigation bar ONLY on mobile/compact screens (< 840dp)
+                                // Show bottom navigation bar ONLY on mobile/compact screens (< 768dp)
                                 if (!isChatThread && !isWideScreen) {
                                     SparkleNavBottomBar(
                                         currentRoute = currentRoute,
