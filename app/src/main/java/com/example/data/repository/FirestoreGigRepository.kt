@@ -53,17 +53,36 @@ data class FirestoreGigApplication(
 )
 
 class FirestoreGigRepository(
-    private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val db: FirebaseFirestore? = null,
+    private val auth: FirebaseAuth? = null
 ) {
-    // Secondary constructor resolving custom database ID from strings.xml
+    // Secondary constructor resolving database safely without throwing during startup
     constructor(context: Context) : this(
-        FirebaseFirestore.getInstance(context.getString(R.string.firestore_database_id)),
-        FirebaseAuth.getInstance()
+        db = try {
+            if (com.google.firebase.FirebaseApp.getApps(context).isNotEmpty()) {
+                val dbId = context.getString(R.string.firestore_database_id)
+                if (dbId.isNotBlank() && dbId != "(default)") {
+                    FirebaseFirestore.getInstance(dbId)
+                } else {
+                    FirebaseFirestore.getInstance()
+                }
+            } else null
+        } catch (e: Throwable) {
+            Log.w(TAG, "Firestore initialization notice: ${e.message}")
+            null
+        },
+        auth = try {
+            if (com.google.firebase.FirebaseApp.getApps(context).isNotEmpty()) {
+                FirebaseAuth.getInstance()
+            } else null
+        } catch (e: Throwable) {
+            Log.w(TAG, "FirebaseAuth initialization notice: ${e.message}")
+            null
+        }
     )
 
     private fun requireUserId(): String {
-        return auth.currentUser?.uid
+        return auth?.currentUser?.uid
             ?: throw IllegalStateException("User must be signed in to perform this operation")
     }
 
@@ -71,7 +90,8 @@ class FirestoreGigRepository(
      * Real-time stream of all open campus gigs from Firestore
      */
     fun observeGigs(): Flow<List<FirestoreGig>> {
-        return db.collection(COLLECTION_GIGS)
+        val firestoreDb = db ?: return kotlinx.coroutines.flow.flowOf(emptyList())
+        return firestoreDb.collection(COLLECTION_GIGS)
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .snapshots()
             .map { snapshot ->
@@ -87,8 +107,9 @@ class FirestoreGigRepository(
      * Fetch a single gig document by ID
      */
     suspend fun getGig(gigId: String): FirestoreGig? {
+        val firestoreDb = db ?: return null
         return try {
-            val doc = db.collection(COLLECTION_GIGS)
+            val doc = firestoreDb.collection(COLLECTION_GIGS)
                 .document(gigId)
                 .get()
                 .await()
@@ -113,6 +134,7 @@ class FirestoreGigRepository(
         publisherUniversity: String,
         deadline: String
     ): Result<String> {
+        val firestoreDb = db ?: return Result.failure(IllegalStateException("Firestore is not available"))
         return try {
             val userId = requireUserId()
             val newGig = FirestoreGig(
@@ -133,7 +155,7 @@ class FirestoreGigRepository(
                 updatedAt = null
             )
 
-            val docRef = db.collection(COLLECTION_GIGS).add(newGig).await()
+            val docRef = firestoreDb.collection(COLLECTION_GIGS).add(newGig).await()
             Result.success(docRef.id)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create gig", e)
@@ -152,6 +174,7 @@ class FirestoreGigRepository(
         portfolioLink: String,
         phone: String
     ): Result<String> {
+        val firestoreDb = db ?: return Result.failure(IllegalStateException("Firestore is not available"))
         return try {
             val userId = requireUserId()
             val application = FirestoreGigApplication(
@@ -166,14 +189,14 @@ class FirestoreGigRepository(
                 submittedAt = null
             )
 
-            val appRef = db.collection(COLLECTION_GIGS)
+            val appRef = firestoreDb.collection(COLLECTION_GIGS)
                 .document(gigId)
                 .collection(COLLECTION_APPLICATIONS)
                 .add(application)
                 .await()
 
             // Increment applications count using Firestore transaction / field value
-            db.collection(COLLECTION_GIGS)
+            firestoreDb.collection(COLLECTION_GIGS)
                 .document(gigId)
                 .update("applicationsCount", com.google.firebase.firestore.FieldValue.increment(1))
                 .await()
@@ -189,7 +212,8 @@ class FirestoreGigRepository(
      * Stream applications for a gig (accessible by gig owner)
      */
     fun observeApplications(gigId: String): Flow<List<FirestoreGigApplication>> {
-        return db.collection(COLLECTION_GIGS)
+        val firestoreDb = db ?: return kotlinx.coroutines.flow.flowOf(emptyList())
+        return firestoreDb.collection(COLLECTION_GIGS)
             .document(gigId)
             .collection(COLLECTION_APPLICATIONS)
             .orderBy("submittedAt", Query.Direction.DESCENDING)

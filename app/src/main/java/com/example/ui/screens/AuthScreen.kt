@@ -1,11 +1,13 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,14 +27,27 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.RegisteredAccount
 import com.example.data.model.SocialProvider
 import com.example.data.model.StudentProfile
 import com.example.data.model.University
+import com.example.ui.components.SearchableUniversityDialog
 import com.example.ui.theme.*
 
+/**
+ * Facebook-style Authentication Screen for Sparkle Connect.
+ *
+ * Implements Facebook's authentic mobile login UX:
+ * 1. Screen lobes / notch / cutout aware with statusBarsPadding() & navigationBarsPadding().
+ * 2. Top language / locale indicator.
+ * 3. Recent Logins row with 1-tap saved account cards.
+ * 4. Primary login card with username/email & password, prominent "Log In" button, and "Forgotten password?".
+ * 5. Instant 1-tap Google/Gmail and Social account options.
+ * 6. Signature Facebook bottom "Create new account" button with complete student registration flow.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
@@ -64,6 +79,7 @@ fun AuthScreen(
     modifier: Modifier = Modifier
 ) {
     var isSignUpTab by remember { mutableStateOf(false) }
+    var isSubmitting by remember { mutableStateOf(false) }
 
     // Sign In form fields
     var loginIdentifier by remember { mutableStateOf("") }
@@ -75,21 +91,16 @@ fun AuthScreen(
     var showGoogleSignInDialog by remember { mutableStateOf(false) }
     var googleEmailInput by remember { mutableStateOf("") }
     var googleSignInError by remember { mutableStateOf<String?>(null) }
-    var notRegisteredGoogleEmail by remember { mutableStateOf<String?>(null) }
 
     var showSocialSignInDialog by remember { mutableStateOf(false) }
     var selectedSocialProvider by remember { mutableStateOf(SocialProvider.LINKEDIN) }
     var socialHandleInput by remember { mutableStateOf("") }
     var socialSignInError by remember { mutableStateOf<String?>(null) }
 
-    // Sign Up with Google dialog
-    var showGoogleSignUpDialog by remember { mutableStateOf(false) }
-    var googleSignUpRealName by remember { mutableStateOf("") }
-    var googleSignUpEmail by remember { mutableStateOf("") }
-    var googleSignUpUniversity by remember { mutableStateOf(universities.firstOrNull() ?: University(name = "University of Nairobi", shortName = "UoN", location = "Nairobi")) }
-    var googleSignUpCourse by remember { mutableStateOf("BSc Computer Science") }
-    var googleSignUpYear by remember { mutableStateOf(2) }
-    var googleSignUpError by remember { mutableStateOf<String?>(null) }
+    // Forgotten password dialog
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var forgotAccountQuery by remember { mutableStateOf("") }
+    var forgotPasswordResult by remember { mutableStateOf<String?>(null) }
 
     // Sign Up regular form fields
     var signUpFullName by remember { mutableStateOf("") }
@@ -101,28 +112,52 @@ fun AuthScreen(
     var signUpCourse by remember { mutableStateOf("BSc Software Engineering") }
     var signUpYear by remember { mutableStateOf(2) }
     var showUniDropdown by remember { mutableStateOf(false) }
+    var showUniSearchDialog by remember { mutableStateOf(false) }
+    var showConfirmDetailsDialog by remember { mutableStateOf(false) }
     var linkSocialInSignUp by remember { mutableStateOf(false) }
     var signUpSocialProvider by remember { mutableStateOf(SocialProvider.GOOGLE) }
     var signUpSocialHandle by remember { mutableStateOf("") }
     var signUpError by remember { mutableStateOf<String?>(null) }
 
     Surface(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding(),
         color = MaterialTheme.colorScheme.background
     ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 20.dp),
-            contentPadding = PaddingValues(top = 40.dp, bottom = 48.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Brand Logo & Header
+            // Facebook-style Top Language Strip
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "English (UK) • Kiswahili • Sheng",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+            }
+
+            // Brand Header: Sparkle Connect (Styled in Facebook layout with Sparkle Brand Colors)
             item {
                 Box(
                     modifier = Modifier
-                        .size(70.dp)
-                        .clip(RoundedCornerShape(22.dp))
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(20.dp))
                         .background(SparklePrimaryGradient),
                     contentAlignment = Alignment.Center
                 ) {
@@ -130,16 +165,16 @@ fun AuthScreen(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = "Sparkle Connect Logo",
                         tint = Color.White,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Sparkle",
-                        style = MaterialTheme.typography.displayMedium.copy(
+                        style = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = SparklePurple
                         )
@@ -147,191 +182,210 @@ fun AuthScreen(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Connect",
-                        style = MaterialTheme.typography.displayMedium.copy(
+                        style = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
                 Text(
                     text = "Kenya University Campus Network & Gigs 🇰🇪",
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                    style = MaterialTheme.typography.bodySmall.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium
-                    )
+                    ),
+                    textAlign = TextAlign.Center
                 )
-
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-
-            // Tab Selector: Sign In vs Create Account
-            item {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(4.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (!isSignUpTab) SparklePurple else Color.Transparent,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    isSignUpTab = false
-                                    loginError = null
-                                }
-                                .testTag("tab_sign_in")
-                        ) {
-                            Text(
-                                text = "Sign In",
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (!isSignUpTab) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(vertical = 12.dp)
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSignUpTab) SparklePurple else Color.Transparent,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    isSignUpTab = true
-                                    signUpError = null
-                                }
-                                .testTag("tab_create_account")
-                        ) {
-                            Text(
-                                text = "Create Account",
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSignUpTab) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(vertical = 12.dp)
-                            )
-                        }
-                    }
-                }
 
                 Spacer(modifier = Modifier.height(20.dp))
             }
 
-            // Quick Actions: Google & Social Account Authentication
-            item {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // Gmail / Google Sign-In & Registration Option
-                    OutlinedButton(
-                        onClick = {
-                            showGoogleSignInDialog = true
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
+            // Facebook Signature Feature: Recent Logins (1-Tap Saved Account Cards)
+            if (!isSignUpTab && registeredAccounts.isNotEmpty()) {
+                item {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(54.dp)
-                            .testTag("google_action_button")
+                            .padding(bottom = 20.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Gmail / Google Icon",
-                            tint = SparklePurple,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-                                text = "Log in using Gmail",
-                                style = MaterialTheme.typography.labelLarge.copy(
+                                text = "Recent logins",
+                                style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                             )
                             Text(
-                                text = "Fetches name automatically & saves to database • No password needed",
+                                text = "Edit",
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 10.sp
+                                    color = SparklePurple,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             )
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Social Media Account button (LinkedIn / GitHub / X)
-                    OutlinedButton(
-                        onClick = {
-                            if (isSignUpTab) {
-                                linkSocialInSignUp = true
-                            } else {
-                                showSocialSignInDialog = true
-                            }
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("social_action_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Social Accounts Icon",
-                            tint = SparkleOrange,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (isSignUpTab) "Link Social Profile (LinkedIn/GitHub/X)" else "Sign In with Social Media Account",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
+                            text = "Click your account or add an account to log in instantly.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
                             )
                         )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(registeredAccounts, key = { it.id }) { acc ->
+                                Card(
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                    modifier = Modifier
+                                        .width(135.dp)
+                                        .clickable {
+                                            isSubmitting = true
+                                            if (acc.authProvider == "GOOGLE" && acc.googleEmail != null) {
+                                                val res = onGoogleSignIn(acc.googleEmail)
+                                                isSubmitting = false
+                                                if (res.isFailure) {
+                                                    loginError = res.exceptionOrNull()?.message
+                                                }
+                                            } else {
+                                                val res = onSignIn(acc.email, acc.password)
+                                                isSubmitting = false
+                                                if (res.isFailure) {
+                                                    loginError = res.exceptionOrNull()?.message
+                                                }
+                                            }
+                                        }
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.padding(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(54.dp)
+                                                .clip(CircleShape)
+                                                .background(SparklePrimaryGradient),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = acc.profile.displayName.split(" ")
+                                                    .mapNotNull { it.firstOrNull() }
+                                                    .take(2)
+                                                    .joinToString(""),
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        Text(
+                                            text = acc.profile.displayName,
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            textAlign = TextAlign.Center
+                                        )
+
+                                        Text(
+                                            text = acc.profile.university.shortName,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = SparklePurple,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 10.sp
+                                            ),
+                                            textAlign = TextAlign.Center
+                                        )
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = SparklePurple.copy(alpha = 0.12f),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                text = "Log In",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    color = SparklePurple,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 11.sp
+                                                ),
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.padding(vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Add Account Option Tile
+                            item {
+                                Card(
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                                    border = BorderStroke(1.dp, SparkleBorder),
+                                    modifier = Modifier
+                                        .width(110.dp)
+                                        .clickable {
+                                            loginIdentifier = ""
+                                            loginPassword = ""
+                                            loginError = null
+                                        }
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center,
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .padding(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(46.dp)
+                                                .clip(CircleShape)
+                                                .background(SparklePurple.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Add,
+                                                contentDescription = "Add Account",
+                                                tint = SparklePurple,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Text(
+                                            text = "Add account",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        HorizontalDivider(modifier = Modifier.weight(1f), color = SparkleBorder)
-                        Text(
-                            text = if (isSignUpTab) " OR SIGN UP WITH DETAILS " else " OR SIGN IN WITH CREDENTIALS ",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 10.sp
-                            ),
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                        HorizontalDivider(modifier = Modifier.weight(1f), color = SparkleBorder)
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
                 }
             }
 
-            // ==================== SIGN IN TAB ====================
+            // ==================== PRIMARY LOGIN FORM (Facebook Style Card) ====================
             if (!isSignUpTab) {
                 item {
                     Card(
@@ -342,29 +396,39 @@ fun AuthScreen(
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "Welcome Back",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                text = "Log In",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             )
                             Text(
-                                text = "Sign in to access your Kenyan campus feed, gigs, and clubs.",
-                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                text = "Enter your student email, username, or phone number",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
+                            // Username / Student Email input
                             OutlinedTextField(
                                 value = loginIdentifier,
                                 onValueChange = {
                                     loginIdentifier = it
                                     loginError = null
                                 },
-                                label = { Text("Email, Username, or Google Account") },
+                                label = { Text("Mobile number, email, or username") },
                                 placeholder = { Text("e.g. brian.mutua@uonbi.ac.ke") },
                                 leadingIcon = {
                                     Icon(Icons.Default.Person, contentDescription = null, tint = SparklePurple)
                                 },
                                 singleLine = true,
                                 shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = SparklePurple,
+                                    unfocusedBorderColor = SparkleBorder
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("login_identifier_input")
@@ -372,6 +436,7 @@ fun AuthScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
+                            // Password input
                             OutlinedTextField(
                                 value = loginPassword,
                                 onValueChange = {
@@ -394,6 +459,10 @@ fun AuthScreen(
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                                 singleLine = true,
                                 shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = SparklePurple,
+                                    unfocusedBorderColor = SparkleBorder
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("login_password_input")
@@ -402,7 +471,7 @@ fun AuthScreen(
                             loginError?.let { err ->
                                 Spacer(modifier = Modifier.height(10.dp))
                                 Surface(
-                                    color = SparklePink.copy(alpha = 0.1f),
+                                    color = SparklePink.copy(alpha = 0.12f),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -419,45 +488,180 @@ fun AuthScreen(
 
                             Spacer(modifier = Modifier.height(18.dp))
 
+                            // Facebook-style Big Primary Log In button
                             Button(
                                 onClick = {
                                     if (loginIdentifier.isBlank()) {
-                                        loginError = "Please enter your email, username, or Gmail"
+                                        loginError = "Please enter your mobile number, email, or username"
                                         return@Button
                                     }
+                                    isSubmitting = true
                                     if (loginIdentifier.trim().lowercase().endsWith("@gmail.com") && loginPassword.isBlank()) {
                                         val result = onGoogleSignIn(loginIdentifier.trim())
+                                        isSubmitting = false
                                         if (result.isFailure) {
                                             loginError = result.exceptionOrNull()?.message ?: "Gmail sign-in failed"
                                         }
                                         return@Button
                                     }
                                     if (loginPassword.isBlank()) {
-                                        loginError = "Please enter your password (or tap 'Log in using Gmail' above)"
+                                        loginError = "Please enter your password or choose 'Log in using Gmail'"
+                                        isSubmitting = false
                                         return@Button
                                     }
                                     val result = onSignIn(loginIdentifier, loginPassword)
+                                    isSubmitting = false
                                     if (result.isFailure) {
-                                        loginError = result.exceptionOrNull()?.message ?: "Sign-in failed"
+                                        loginError = result.exceptionOrNull()?.message ?: "Invalid credentials. Please try again."
                                     }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = SparklePurple),
+                                enabled = !isSubmitting,
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(50.dp)
                                     .testTag("submit_login_button")
                             ) {
+                                if (isSubmitting) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        color = Color.White,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Logging In...",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Log In",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Facebook-style Forgotten Password Link
+                            TextButton(
+                                onClick = {
+                                    forgotAccountQuery = loginIdentifier
+                                    forgotPasswordResult = null
+                                    showForgotPasswordDialog = true
+                                },
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            ) {
                                 Text(
-                                    text = "Sign In to Sparkle Connect",
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                    text = "Forgotten password?",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        color = SparklePurple,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Divider with "or"
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                HorizontalDivider(modifier = Modifier.weight(1f), color = SparkleBorder)
+                                Text(
+                                    text = "or",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 10.dp)
+                                )
+                                HorizontalDivider(modifier = Modifier.weight(1f), color = SparkleBorder)
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // 1-Tap Gmail Authentication
+                            OutlinedButton(
+                                onClick = { showGoogleSignInDialog = true },
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .testTag("google_action_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    contentDescription = null,
+                                    tint = SparklePurple,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Log in using Gmail (No password needed)",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Social Media Authentication
+                            OutlinedButton(
+                                onClick = { showSocialSignInDialog = true },
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(46.dp)
+                                    .testTag("social_action_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = null,
+                                    tint = SparkleOrange,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Log in with LinkedIn / GitHub / X",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
                                 )
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(28.dp))
+
+                    // Facebook Signature Bottom Action: "Create new account" button
+                    OutlinedButton(
+                        onClick = {
+                            isSignUpTab = true
+                            signUpError = null
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(1.5.dp, SparklePurple),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .testTag("tab_create_account")
+                    ) {
+                        Text(
+                            text = "Create new account",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = SparklePurple
+                            )
+                        )
+                    }
                 }
             } else {
-                // ==================== CREATE ACCOUNT TAB ====================
+                // ==================== CREATE NEW ACCOUNT FLOW (Facebook Style) ====================
                 item {
                     Card(
                         shape = RoundedCornerShape(20.dp),
@@ -466,13 +670,37 @@ fun AuthScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Join Sparkle Connect",
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                                TextButton(
+                                    onClick = { isSignUpTab = false },
+                                    modifier = Modifier.testTag("tab_sign_in")
+                                ) {
+                                    Text(
+                                        text = "Already have an account?",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = SparklePurple,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    )
+                                }
+                            }
+
                             Text(
-                                text = "Create Campus Profile",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                            Text(
-                                text = "Enter your real name and university info. Your record will be stored directly into the database.",
-                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                text = "Create a profile to connect with Kenyan campus peers, gigs, and clubs.",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -484,8 +712,8 @@ fun AuthScreen(
                                     signUpFullName = it
                                     signUpError = null
                                 },
-                                label = { Text("Real Full Name *") },
-                                placeholder = { Text("e.g. Kelvin Ochieng or Amina Wanjiru") },
+                                label = { Text("What's your name? (Real Full Name) *") },
+                                placeholder = { Text("e.g. Brian Mutua or Amina Wanjiru") },
                                 leadingIcon = {
                                     Icon(Icons.Default.Badge, contentDescription = null, tint = SparklePurple)
                                 },
@@ -498,7 +726,7 @@ fun AuthScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // USERNAME
+                            // USERNAME / CAMPUS HANDLE
                             OutlinedTextField(
                                 value = signUpUsername,
                                 onValueChange = {
@@ -506,7 +734,7 @@ fun AuthScreen(
                                     signUpError = null
                                 },
                                 label = { Text("Campus Handle / Username *") },
-                                placeholder = { Text("e.g. kelvin_ochieng") },
+                                placeholder = { Text("e.g. brian_mutua") },
                                 leadingIcon = {
                                     Icon(Icons.Default.AlternateEmail, contentDescription = null, tint = SparklePurple)
                                 },
@@ -519,55 +747,27 @@ fun AuthScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // UNIVERSITY SELECTION DROPDOWN
+                            // HIGHER EDUCATION INSTITUTION SELECTOR (Searchable with Google Grounding)
                             Box {
                                 OutlinedTextField(
                                     value = "${selectedUniversity.shortName} - ${selectedUniversity.name}",
                                     onValueChange = {},
                                     readOnly = true,
-                                    label = { Text("Higher Education Institution *") },
+                                    label = { Text("Higher Education Institution (Search any Kenyan Campus) *") },
                                     leadingIcon = {
                                         Icon(Icons.Default.School, contentDescription = null, tint = SparklePurple)
                                     },
                                     trailingIcon = {
-                                        IconButton(onClick = { showUniDropdown = true }) {
-                                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Select University")
+                                        IconButton(onClick = { showUniSearchDialog = true }) {
+                                            Icon(Icons.Default.Search, contentDescription = "Search University", tint = SparklePurple)
                                         }
                                     },
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { showUniDropdown = true }
+                                        .clickable { showUniSearchDialog = true }
                                         .testTag("signup_university_selector")
                                 )
-
-                                DropdownMenu(
-                                    expanded = showUniDropdown,
-                                    onDismissRequest = { showUniDropdown = false }
-                                ) {
-                                    universities.forEach { uni ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Column {
-                                                    Text(
-                                                        "${uni.shortName} - ${uni.name}",
-                                                        fontWeight = FontWeight.SemiBold
-                                                    )
-                                                    Text(
-                                                        uni.location,
-                                                        style = MaterialTheme.typography.bodySmall.copy(
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    )
-                                                }
-                                            },
-                                            onClick = {
-                                                selectedUniversity = uni
-                                                showUniDropdown = false
-                                            }
-                                        )
-                                    }
-                                }
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
@@ -619,7 +819,7 @@ fun AuthScreen(
                                     signUpError = null
                                 },
                                 label = { Text("Student Email Address *") },
-                                placeholder = { Text("e.g. student@students.uonbi.ac.ke") },
+                                placeholder = { Text("e.g. brian@students.uonbi.ac.ke") },
                                 leadingIcon = {
                                     Icon(Icons.Default.Email, contentDescription = null, tint = SparklePurple)
                                 },
@@ -681,11 +881,11 @@ fun AuthScreen(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Column {
                                         Text(
-                                            "Link Google or Social Account",
+                                            "Link Google or Social Profile",
                                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                                         )
                                         Text(
-                                            "Allows 1-tap sign-in with your social account later",
+                                            "Enables 1-tap fast sign-in later",
                                             style = MaterialTheme.typography.bodySmall.copy(
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 fontSize = 11.sp
@@ -724,7 +924,7 @@ fun AuthScreen(
                             signUpError?.let { err ->
                                 Spacer(modifier = Modifier.height(10.dp))
                                 Surface(
-                                    color = SparklePink.copy(alpha = 0.1f),
+                                    color = SparklePink.copy(alpha = 0.12f),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -741,10 +941,15 @@ fun AuthScreen(
 
                             Spacer(modifier = Modifier.height(20.dp))
 
+                            // Submit Registration with Confirmation Review Step
                             Button(
                                 onClick = {
                                     if (signUpFullName.isBlank()) {
                                         signUpError = "Please enter your real full name"
+                                        return@Button
+                                    }
+                                    if (signUpUsername.isBlank()) {
+                                        signUpError = "Please enter your campus handle / username"
                                         return@Button
                                     }
                                     if (signUpEmail.isBlank() || !signUpEmail.contains("@")) {
@@ -756,27 +961,8 @@ fun AuthScreen(
                                         return@Button
                                     }
 
-                                    val socialProv = if (linkSocialInSignUp) signUpSocialProvider.name else "EMAIL"
-                                    val socialHand = if (linkSocialInSignUp) signUpSocialHandle.ifBlank { null } else null
-                                    val gEmail = if (linkSocialInSignUp && signUpSocialProvider == SocialProvider.GOOGLE) {
-                                        signUpSocialHandle.ifBlank { signUpEmail }
-                                    } else null
-
-                                    val result = onSignUp(
-                                        signUpFullName,
-                                        signUpUsername,
-                                        signUpEmail,
-                                        signUpPassword,
-                                        selectedUniversity,
-                                        signUpCourse,
-                                        signUpYear,
-                                        socialProv,
-                                        socialHand,
-                                        gEmail
-                                    )
-                                    if (result.isFailure) {
-                                        signUpError = result.exceptionOrNull()?.message ?: "Account registration failed"
-                                    }
+                                    // Open Confirmation Dialog to verify details before writing to database
+                                    showConfirmDetailsDialog = true
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = SparklePurple),
                                 shape = RoundedCornerShape(12.dp),
@@ -788,15 +974,136 @@ fun AuthScreen(
                                 Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Store Account in Database & Enter",
+                                    text = "Join Campus Network & Save to Database",
                                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Back to Login Link
+                            TextButton(
+                                onClick = { isSignUpTab = false },
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            ) {
+                                Text(
+                                    text = "Already have an account? Log In",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = SparklePurple,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 )
                             }
                         }
                     }
                 }
             }
+
+            // Meta/Facebook Style Footer
+            item {
+                Spacer(modifier = Modifier.height(30.dp))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Sparkle Connect by CampusLabs 🇰🇪",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Text(
+                        text = "Meta-inspired campus network • About • Help • Terms & Privacy",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            fontSize = 11.sp
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
         }
+    }
+
+    // ==================== DIALOG: FORGOTTEN PASSWORD / ACCOUNT RECOVERY ====================
+    if (showForgotPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { showForgotPasswordDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = SparklePurple)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Find Your Account", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        "Please enter your student email or username to search for your account in the Sparkle Connect database.",
+                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = forgotAccountQuery,
+                        onValueChange = {
+                            forgotAccountQuery = it
+                            forgotPasswordResult = null
+                        },
+                        label = { Text("Email or Username") },
+                        placeholder = { Text("e.g. brian.mutua@uonbi.ac.ke") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    forgotPasswordResult?.let { res ->
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Surface(
+                            color = SparklePurple.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = res,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = SparklePurple,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val q = forgotAccountQuery.trim().lowercase()
+                        val matched = registeredAccounts.find {
+                            it.email.lowercase() == q ||
+                            it.profile.username.lowercase() == q ||
+                            (it.googleEmail != null && it.googleEmail.lowercase() == q)
+                        }
+                        if (matched != null) {
+                            forgotPasswordResult = "Found account for ${matched.profile.displayName} (${matched.profile.university.shortName})! You can log in using email: ${matched.email}."
+                            loginIdentifier = matched.email
+                        } else {
+                            forgotPasswordResult = "No account found matching '$forgotAccountQuery'. Please create a new account or try another email."
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SparklePurple)
+                ) {
+                    Text("Search Database")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showForgotPasswordDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
     }
 
     // ==================== DIALOG: GOOGLE / GMAIL SIGN-IN ====================
@@ -831,7 +1138,7 @@ fun AuthScreen(
                             googleSignInError = null
                         },
                         label = { Text("Gmail Address") },
-                        placeholder = { Text("e.g. holdstonez@gmail.com") },
+                        placeholder = { Text("e.g. student@gmail.com") },
                         leadingIcon = {
                             Icon(Icons.Default.Email, contentDescription = null, tint = SparklePurple)
                         },
@@ -857,8 +1164,6 @@ fun AuthScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Use Device Google Account (One-Tap)", fontSize = 12.sp)
                     }
-
-                    Spacer(modifier = Modifier.height(10.dp))
 
                     googleSignInError?.let { err ->
                         Spacer(modifier = Modifier.height(10.dp))
@@ -896,7 +1201,7 @@ fun AuthScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SparklePurple)
                 ) {
-                    Text("Log in with Gmail (No Password Needed)")
+                    Text("Log in with Gmail")
                 }
             },
             dismissButton = {
@@ -999,134 +1304,111 @@ fun AuthScreen(
         )
     }
 
-    // ==================== DIALOG: SIGN UP WITH GOOGLE ====================
-    if (showGoogleSignUpDialog) {
-        var showGoogleUniDropdown by remember { mutableStateOf(false) }
-
+    // ==================== DIALOG: CONFIRM ACCOUNT DETAILS ====================
+    if (showConfirmDetailsDialog) {
         AlertDialog(
-            onDismissRequest = { showGoogleSignUpDialog = false },
+            onDismissRequest = { showConfirmDetailsDialog = false },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CloudDone, contentDescription = null, tint = SparklePurple)
+                    Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = SparklePurple)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Record Google Student Profile", fontWeight = FontWeight.Bold)
+                    Text("Confirm Your Details", fontWeight = FontWeight.Bold)
                 }
             },
             text = {
                 Column {
                     Text(
-                        "Your real name and Google account will be recorded into the Sparkle Connect database.",
+                        "Please verify that your campus details are correct before saving your profile to the database:",
                         style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
-
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    OutlinedTextField(
-                        value = googleSignUpRealName,
-                        onValueChange = { googleSignUpRealName = it },
-                        label = { Text("Real Full Name *") },
-                        placeholder = { Text("e.g. Kelvin Ochieng") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = googleSignUpEmail,
-                        onValueChange = { googleSignUpEmail = it },
-                        label = { Text("Google Email *") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Institution Dropdown
-                    Box {
-                        OutlinedTextField(
-                            value = "${googleSignUpUniversity.shortName} - ${googleSignUpUniversity.name}",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("University *") },
-                            trailingIcon = {
-                                IconButton(onClick = { showGoogleUniDropdown = true }) {
-                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                                }
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showGoogleUniDropdown = true }
-                        )
-
-                        DropdownMenu(
-                            expanded = showGoogleUniDropdown,
-                            onDismissRequest = { showGoogleUniDropdown = false }
-                        ) {
-                            universities.forEach { uni ->
-                                DropdownMenuItem(
-                                    text = { Text("${uni.shortName} - ${uni.name}") },
-                                    onClick = {
-                                        googleSignUpUniversity = uni
-                                        showGoogleUniDropdown = false
-                                    }
-                                )
-                            }
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("• Real Name: $signUpFullName", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            Text("• Handle: @$signUpUsername", fontSize = 13.sp)
+                            Text(
+                                "• Institution: ${selectedUniversity.shortName} - ${selectedUniversity.name}",
+                                fontWeight = FontWeight.Bold,
+                                color = SparklePurple,
+                                fontSize = 13.sp
+                            )
+                            Text("• Course: $signUpCourse (Year $signUpYear)", fontSize = 13.sp)
+                            Text("• Student Email: $signUpEmail", fontSize = 13.sp)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = googleSignUpCourse,
-                        onValueChange = { googleSignUpCourse = it },
-                        label = { Text("Course of Study") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = SparkleOrange.copy(alpha = 0.12f),
                         modifier = Modifier.fillMaxWidth()
-                    )
-
-                    googleSignUpError?.let { err ->
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = err,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = SparklePink,
-                                fontWeight = FontWeight.Medium
+                    ) {
+                        Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.WarningAmber, contentDescription = null, tint = SparkleOrange, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Important: Your selected university cannot be changed after registration.",
+                                style = MaterialTheme.typography.labelSmall.copy(color = SparkleOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                             )
-                        )
+                        }
                     }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val res = onSignUpWithGoogle(
-                            googleSignUpRealName,
-                            googleSignUpEmail,
-                            googleSignUpUniversity,
-                            googleSignUpCourse,
-                            googleSignUpYear
+                        showConfirmDetailsDialog = false
+                        val socialProv = if (linkSocialInSignUp) signUpSocialProvider.name else "EMAIL"
+                        val socialHand = if (linkSocialInSignUp) signUpSocialHandle.ifBlank { null } else null
+                        val gEmail = if (linkSocialInSignUp && signUpSocialProvider == SocialProvider.GOOGLE) {
+                            signUpSocialHandle.ifBlank { signUpEmail }
+                        } else null
+
+                        val result = onSignUp(
+                            signUpFullName,
+                            signUpUsername,
+                            signUpEmail,
+                            signUpPassword,
+                            selectedUniversity,
+                            signUpCourse,
+                            signUpYear,
+                            socialProv,
+                            socialHand,
+                            gEmail
                         )
-                        if (res.isSuccess) {
-                            showGoogleSignUpDialog = false
-                        } else {
-                            googleSignUpError = res.exceptionOrNull()?.message
+                        if (result.isFailure) {
+                            signUpError = result.exceptionOrNull()?.message ?: "Account registration failed"
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SparklePurple)
                 ) {
-                    Text("Save to Database & Sign In")
+                    Text("Confirm & Create Account")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showGoogleSignUpDialog = false }) {
-                    Text("Cancel")
+                TextButton(onClick = { showConfirmDetailsDialog = false }) {
+                    Text("Edit Details")
                 }
             }
+        )
+    }
+
+    // ==================== DIALOG: SEARCHABLE UNIVERSITY SELECTOR ====================
+    if (showUniSearchDialog) {
+        SearchableUniversityDialog(
+            universities = universities,
+            selectedUniversity = selectedUniversity,
+            onSelectUniversity = { uni ->
+                selectedUniversity = uni
+                showUniSearchDialog = false
+            },
+            onDismiss = { showUniSearchDialog = false }
         )
     }
 }

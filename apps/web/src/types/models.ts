@@ -27,6 +27,8 @@ export interface StudentProfile {
   skills: string[];
   interests: string[];
   joinedDate: string;
+  photos?: string[];
+  isPrivateAccount?: boolean;
 }
 
 export interface RegisteredAccount {
@@ -39,6 +41,24 @@ export interface RegisteredAccount {
   socialHandle?: string | null;
   isRecordedInDatabase: boolean;
 }
+
+export type MomentAudience = 'PUBLIC' | 'CAMPUS_ONLY' | 'CONNECTIONS_ONLY';
+
+export interface SparkleMoment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+  authorUniversity: string;
+  textCaption: string;
+  backgroundColorHex: string;
+  createdAtTimestamp: number;
+  audience: MomentAudience;
+  viewedByUsers: string[];
+  isViewedByMe: boolean;
+}
+
+export type PostVisibility = 'PUBLIC' | 'CONNECTIONS' | 'CAMPUS_COMMUNITY' | 'PRIVATE';
 
 export type PostCategory =
   | 'ALL'
@@ -57,6 +77,7 @@ export interface PostComment {
   authorUniversity: string;
   content: string;
   timeAgo: string;
+  createdAtTimestamp?: number;
   isAnonymous?: boolean;
 }
 
@@ -78,8 +99,13 @@ export interface CampusPost {
   isSavedByMe?: boolean;
   isSaved?: boolean;
   timeAgo: string;
+  createdAtTimestamp?: number;
   comments: PostComment[];
   mediaUrl?: string | null;
+  images?: string[];
+  storagePaths?: string[];
+  visibility?: PostVisibility;
+  commentsDisabled?: boolean;
   tags?: string[];
   sharesCount?: number;
 }

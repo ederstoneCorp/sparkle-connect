@@ -1,20 +1,26 @@
 package com.example
 
 import android.os.Bundle
-import android.view.View
-import android.view.WindowInsetsController
-import android.os.Build
+
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -39,31 +45,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // ── Fullscreen / Immersive Mode ──────────────────────────────────────
-        // Hides the device status bar and navigation bar for a true fullscreen
-        // experience. Uses WindowInsetsController on API 30+ for stability,
-        // falls back to legacy systemUiVisibility on older devices.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.insetsController?.let { controller ->
-                controller.hide(
-                    android.view.WindowInsets.Type.statusBars() or
-                    android.view.WindowInsets.Type.navigationBars()
-                )
-                controller.systemBarsBehavior =
-                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            )
-        }
-        // ────────────────────────────────────────────────────────────────────
+
 
         setContent {
             SparkleConnectTheme {
@@ -74,18 +56,26 @@ class MainActivity : ComponentActivity() {
 
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                 val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
-                val registeredAccounts by viewModel.registeredAccounts.collectAsStateWithLifecycle()
+                val deviceLoggedInAccounts by viewModel.deviceLoggedInAccounts.collectAsStateWithLifecycle()
                 val filteredPosts by viewModel.filteredPosts.collectAsStateWithLifecycle()
                 val filteredGigs by viewModel.filteredGigs.collectAsStateWithLifecycle()
                 val communities by viewModel.communities.collectAsStateWithLifecycle()
                 val events by viewModel.events.collectAsStateWithLifecycle()
                 val conversations by viewModel.conversations.collectAsStateWithLifecycle()
                 val notifications by viewModel.notifications.collectAsStateWithLifecycle()
+                val moments by viewModel.activeMoments.collectAsStateWithLifecycle()
                 val snackbarHostState = remember { SnackbarHostState() }
                 val coroutineScope = rememberCoroutineScope()
                 val authManager = remember { com.example.data.auth.AuthManager(this@MainActivity) }
                 val firebaseUser by authManager.currentUser.collectAsStateWithLifecycle()
                 var showCameraCapture by remember { mutableStateOf(false) }
+                var showCreateMomentDialog by remember { mutableStateOf(false) }
+                var showSplash by remember { mutableStateOf(true) }
+
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(1600)
+                    showSplash = false
+                }
 
                 LaunchedEffect(uiState.snackbarMessage) {
                     uiState.snackbarMessage?.let { message ->
@@ -99,11 +89,13 @@ class MainActivity : ComponentActivity() {
 
                 val loggedInUser = currentUser
 
-                if (loggedInUser == null) {
+                if (showSplash) {
+                    com.example.ui.screens.SplashScreen()
+                } else if (loggedInUser == null) {
                     // AUTHENTICATION SCREEN GATE: Shown on app start
                     AuthScreen(
                         universities = viewModel.universities,
-                        registeredAccounts = registeredAccounts,
+                        registeredAccounts = deviceLoggedInAccounts,
                         onSignIn = { identifier, password ->
                             viewModel.signIn(identifier, password)
                         },
@@ -150,119 +142,306 @@ class MainActivity : ComponentActivity() {
                     )
                 } else {
                     // MAIN APPLICATION: Shown once authenticated
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                        snackbarHost = { SnackbarHost(snackbarHostState) },
-                        topBar = {
-                            // Hide main top bar when viewing a specific conversation thread
-                            if (!isChatThread) {
-                                SparkleTopBar(
-                                    selectedUniversity = uiState.selectedUniversityFilter,
-                                    universities = viewModel.universities,
-                                    onSelectUniversity = { viewModel.setUniversityFilter(it) },
-                                    isSearchActive = uiState.isSearchActive,
-                                    searchQuery = uiState.searchQuery,
-                                    onSearchQueryChange = { viewModel.setSearchQuery(it) },
-                                    onToggleSearch = { viewModel.toggleSearch() },
-                                    unreadNotificationCount = unreadCount,
-                                    onOpenNotifications = { viewModel.showNotifications(true) },
-                                    onOpenProfile = { viewModel.showProfile(true) },
-                                    userAvatarInitial = loggedInUser.displayName.split(" ")
-                                        .mapNotNull { it.firstOrNull() }
-                                        .joinToString("")
-                                )
-                            }
-                        },
-                        bottomBar = {
-                            // Hide bottom nav when inside chat thread to give full keyboard space
-                            if (!isChatThread) {
-                                SparkleNavBottomBar(
-                                    currentRoute = currentRoute,
-                                    onNavigate = { screen ->
-                                        navController.navigate(screen.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        val isWideScreen = maxWidth >= 840.dp
+
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                            snackbarHost = { SnackbarHost(snackbarHostState) },
+                            topBar = {
+                                // Hide main top bar when viewing a specific conversation thread
+                                if (!isChatThread) {
+                                    SparkleTopBar(
+                                        selectedUniversity = uiState.selectedUniversityFilter,
+                                        universities = viewModel.universities,
+                                        onSelectUniversity = { viewModel.setUniversityFilter(it) },
+                                        isSearchActive = uiState.isSearchActive,
+                                        searchQuery = uiState.searchQuery,
+                                        onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                                        onToggleSearch = { viewModel.toggleSearch() },
+                                        onOpenCampusAiSearch = { viewModel.toggleAiSearch(true) },
+                                        unreadNotificationCount = unreadCount,
+                                        onOpenNotifications = { viewModel.showNotifications(true) },
+                                        onOpenProfile = { viewModel.showProfile(true) },
+                                        userAvatarInitial = loggedInUser.displayName.split(" ")
+                                            .mapNotNull { it.firstOrNull() }
+                                            .joinToString("")
+                                    )
+                                }
+                            },
+                            bottomBar = {
+                                // Show bottom navigation bar ONLY on mobile/compact screens (< 840dp)
+                                if (!isChatThread && !isWideScreen) {
+                                    SparkleNavBottomBar(
+                                        currentRoute = currentRoute,
+                                        onNavigate = { screen ->
+                                            navController.navigate(screen.route) {
+                                                popUpTo(navController.graph.findStartDestination().id) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
                                             }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    },
-                                    unreadMessagesCount = unreadMessages
-                                )
-                            }
-                        }
-                    ) { innerPadding ->
-                        NavHost(
-                            navController = navController,
-                            startDestination = Screen.Feed.route,
-                            modifier = Modifier.padding(innerPadding)
-                        ) {
-                            composable(Screen.Feed.route) {
-                                FeedScreen(
-                                    posts = filteredPosts,
-                                    selectedCategory = uiState.selectedCategory,
-                                    onSelectCategory = { viewModel.setCategory(it) },
-                                    onLikePost = { viewModel.toggleLike(it) },
-                                    onAddComment = { postId, text -> viewModel.addComment(postId, text) },
-                                    onCreatePostClick = { viewModel.showCreatePost(true) }
-                                )
-                            }
-                            composable(Screen.Gigs.route) {
-                                GigsScreen(
-                                    gigs = filteredGigs,
-                                    selectedCategory = uiState.selectedGigCategory,
-                                    onSelectCategory = { viewModel.setGigCategory(it) },
-                                    onBookmarkToggle = { viewModel.toggleGigBookmark(it) },
-                                    onApplyClick = { viewModel.openApplyGig(it) },
-                                    onCreateGigClick = { viewModel.showCreateGig(true) }
-                                )
-                            }
-                            composable(Screen.Communities.route) {
-                                CommunitiesScreen(
-                                    communities = communities,
-                                    onToggleJoin = { viewModel.toggleCommunityMembership(it) }
-                                )
-                            }
-                            composable(Screen.Events.route) {
-                                EventsScreen(
-                                    events = events,
-                                    onToggleRegistration = { viewModel.toggleEventRegistration(it) }
-                                )
-                            }
-                            composable(Screen.Messages.route) {
-                                MessagesScreen(
-                                    conversations = conversations,
-                                    activeConversation = null,
-                                    onSelectConversation = { conv ->
-                                        if (conv != null) {
-                                            navController.navigate(Screen.ChatThread.createRoute(conv.id))
-                                        }
-                                    },
-                                    onSendMessage = { convId, text -> viewModel.sendMessage(convId, text) }
-                                )
-                            }
-                            composable(
-                                route = Screen.ChatThread.route,
-                                arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
-                            ) { backStackEntry ->
-                                val conversationId = backStackEntry.arguments?.getString("conversationId")
-                                val conversation = conversations.find { it.id == conversationId }
-                                if (conversation != null) {
-                                    ChatThreadView(
-                                        conversation = conversation,
-                                        onBack = { navController.popBackStack() },
-                                        onSendMessage = { text -> viewModel.sendMessage(conversation.id, text) }
+                                        },
+                                        unreadMessagesCount = unreadMessages
                                     )
                                 }
                             }
+                        ) { innerPadding ->
+                            if (isWideScreen && !isChatThread) {
+                                // 3-COLUMN DESKTOP / TABLET LAYOUT (Facebook style layout)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(innerPadding)
+                                        .background(MaterialTheme.colorScheme.background)
+                                ) {
+                                    // LEFT COLUMN: Navigation Sidebar & Profile Summary
+                                    com.example.ui.components.LeftNavigationSidebar(
+                                        currentUser = loggedInUser,
+                                        currentRoute = currentRoute,
+                                        onNavigate = { screen ->
+                                            navController.navigate(screen.route) {
+                                                popUpTo(navController.graph.findStartDestination().id) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
+                                        },
+                                        onOpenProfile = { viewModel.showProfile(true) },
+                                        unreadMessagesCount = unreadMessages,
+                                        modifier = Modifier
+                                            .width(260.dp)
+                                            .fillMaxHeight()
+                                    )
+
+                                    // CENTER COLUMN: Main Content Feed / Screen
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                    ) {
+                                        NavHost(
+                                            navController = navController,
+                                            startDestination = Screen.Feed.route,
+                                            modifier = Modifier.fillMaxSize()
+                                        ) {
+                                            composable(Screen.Feed.route) {
+                                                FeedScreen(
+                                                    posts = filteredPosts,
+                                                    moments = moments,
+                                                    currentUser = loggedInUser,
+                                                    selectedCategory = uiState.selectedCategory,
+                                                    onSelectCategory = { viewModel.setCategory(it) },
+                                                    onLikePost = { viewModel.toggleLike(it) },
+                                                    onAddComment = { postId, text -> viewModel.addComment(postId, text) },
+                                                    onCreatePostClick = { viewModel.showCreatePost(true) },
+                                                    onCreateMomentClick = { showCreateMomentDialog = true },
+                                                    onDeletePost = { viewModel.deletePost(it) },
+                                                    onUpdateCaption = { postId, cap -> viewModel.updatePostCaption(postId, cap) },
+                                                    onToggleSavePost = { viewModel.toggleSavePost(it) },
+                                                    onToggleCommentsDisabled = { viewModel.togglePostCommentsDisabled(it) },
+                                                    onReportPost = { postId, reason -> viewModel.reportPost(postId, reason) },
+                                                    onBlockUser = { viewModel.blockUser(it) },
+                                                    onDeleteComment = { postId, cId -> viewModel.deleteComment(postId, cId) },
+                                                    onDeleteMoment = { viewModel.deleteMoment(it) },
+                                                    onSendMomentReaction = { momentId, reaction ->
+                                                        coroutineScope.launch {
+                                                            snackbarHostState.showSnackbar("Reaction sent!")
+                                                        }
+                                                    },
+                                                    visiblePostLimit = uiState.visiblePostLimit,
+                                                    isLoadingMore = uiState.isLoadingMorePosts,
+                                                    onLoadMorePosts = { viewModel.loadMorePosts() }
+                                                )
+                                            }
+                                            composable(Screen.Gigs.route) {
+                                                GigsScreen(
+                                                    gigs = filteredGigs,
+                                                    selectedCategory = uiState.selectedGigCategory,
+                                                    onSelectCategory = { viewModel.setGigCategory(it) },
+                                                    onBookmarkToggle = { viewModel.toggleGigBookmark(it) },
+                                                    onApplyClick = { viewModel.openApplyGig(it) },
+                                                    onCreateGigClick = { viewModel.showCreateGig(true) },
+                                                    isLoading = uiState.isTabContentLoading
+                                                )
+                                            }
+                                            composable(Screen.Communities.route) {
+                                                CommunitiesScreen(
+                                                    communities = communities,
+                                                    onToggleJoin = { viewModel.toggleCommunityMembership(it) },
+                                                    isLoading = uiState.isTabContentLoading
+                                                )
+                                            }
+                                            composable(Screen.Events.route) {
+                                                EventsScreen(
+                                                    events = events,
+                                                    onToggleRegistration = { viewModel.toggleEventRegistration(it) },
+                                                    isLoading = uiState.isTabContentLoading
+                                                )
+                                            }
+                                            composable(Screen.Messages.route) {
+                                                MessagesScreen(
+                                                    conversations = conversations,
+                                                    activeConversation = null,
+                                                    onSelectConversation = { conv ->
+                                                        if (conv != null) {
+                                                            navController.navigate(Screen.ChatThread.createRoute(conv.id))
+                                                        }
+                                                    },
+                                                    onSendMessage = { convId, text -> viewModel.sendMessage(convId, text) }
+                                                )
+                                            }
+                                            composable(
+                                                route = Screen.ChatThread.route,
+                                                arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+                                            ) { backStackEntry ->
+                                                val conversationId = backStackEntry.arguments?.getString("conversationId")
+                                                val conversation = conversations.find { it.id == conversationId }
+                                                if (conversation != null) {
+                                                    ChatThreadView(
+                                                        conversation = conversation,
+                                                        onBack = { navController.popBackStack() },
+                                                        onSendMessage = { text -> viewModel.sendMessage(conversation.id, text) }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // RIGHT COLUMN: Secondary Widgets
+                                    com.example.ui.components.RightSecondaryWidgetsSidebar(
+                                        gigs = filteredGigs,
+                                        events = events,
+                                        communities = communities,
+                                        onOpenGig = { viewModel.openApplyGig(it) },
+                                        modifier = Modifier
+                                            .width(300.dp)
+                                            .fillMaxHeight()
+                                    )
+                                }
+                            } else {
+                                // MOBILE / COMPACT LAYOUT
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(innerPadding)
+                                ) {
+                                    NavHost(
+                                        navController = navController,
+                                        startDestination = Screen.Feed.route,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        composable(Screen.Feed.route) {
+                                            FeedScreen(
+                                                posts = filteredPosts,
+                                                moments = moments,
+                                                currentUser = loggedInUser,
+                                                selectedCategory = uiState.selectedCategory,
+                                                onSelectCategory = { viewModel.setCategory(it) },
+                                                onLikePost = { viewModel.toggleLike(it) },
+                                                onAddComment = { postId, text -> viewModel.addComment(postId, text) },
+                                                onCreatePostClick = { viewModel.showCreatePost(true) },
+                                                onCreateMomentClick = { showCreateMomentDialog = true },
+                                                onDeletePost = { viewModel.deletePost(it) },
+                                                onUpdateCaption = { postId, cap -> viewModel.updatePostCaption(postId, cap) },
+                                                onToggleSavePost = { viewModel.toggleSavePost(it) },
+                                                onToggleCommentsDisabled = { viewModel.togglePostCommentsDisabled(it) },
+                                                onReportPost = { postId, reason -> viewModel.reportPost(postId, reason) },
+                                                onBlockUser = { viewModel.blockUser(it) },
+                                                onDeleteComment = { postId, cId -> viewModel.deleteComment(postId, cId) },
+                                                onDeleteMoment = { viewModel.deleteMoment(it) },
+                                                onSendMomentReaction = { momentId, reaction ->
+                                                    coroutineScope.launch {
+                                                        snackbarHostState.showSnackbar("Reaction sent!")
+                                                    }
+                                                },
+                                                visiblePostLimit = uiState.visiblePostLimit,
+                                                isLoadingMore = uiState.isLoadingMorePosts,
+                                                onLoadMorePosts = { viewModel.loadMorePosts() }
+                                            )
+                                        }
+                                        composable(Screen.Gigs.route) {
+                                            GigsScreen(
+                                                gigs = filteredGigs,
+                                                selectedCategory = uiState.selectedGigCategory,
+                                                onSelectCategory = { viewModel.setGigCategory(it) },
+                                                onBookmarkToggle = { viewModel.toggleGigBookmark(it) },
+                                                onApplyClick = { viewModel.openApplyGig(it) },
+                                                onCreateGigClick = { viewModel.showCreateGig(true) },
+                                                isLoading = uiState.isTabContentLoading
+                                            )
+                                        }
+                                        composable(Screen.Communities.route) {
+                                            CommunitiesScreen(
+                                                communities = communities,
+                                                onToggleJoin = { viewModel.toggleCommunityMembership(it) },
+                                                isLoading = uiState.isTabContentLoading
+                                            )
+                                        }
+                                        composable(Screen.Events.route) {
+                                            EventsScreen(
+                                                events = events,
+                                                onToggleRegistration = { viewModel.toggleEventRegistration(it) },
+                                                isLoading = uiState.isTabContentLoading
+                                            )
+                                        }
+                                        composable(Screen.Messages.route) {
+                                            MessagesScreen(
+                                                conversations = conversations,
+                                                activeConversation = null,
+                                                onSelectConversation = { conv ->
+                                                    if (conv != null) {
+                                                        navController.navigate(Screen.ChatThread.createRoute(conv.id))
+                                                    }
+                                                },
+                                                onSendMessage = { convId, text -> viewModel.sendMessage(convId, text) }
+                                            )
+                                        }
+                                        composable(
+                                            route = Screen.ChatThread.route,
+                                            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+                                        ) { backStackEntry ->
+                                            val conversationId = backStackEntry.arguments?.getString("conversationId")
+                                            val conversation = conversations.find { it.id == conversationId }
+                                            if (conversation != null) {
+                                                ChatThreadView(
+                                                    conversation = conversation,
+                                                    onBack = { navController.popBackStack() },
+                                                    onSendMessage = { text -> viewModel.sendMessage(conversation.id, text) }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
+                    }
 
                         // Modals and Sheets
                         if (uiState.showCreatePostDialog) {
-                            CreatePostDialog(
+                            com.example.ui.components.EnhancedCreatePostDialog(
                                 onDismiss = { viewModel.showCreatePost(false) },
-                                onSubmit = { content, category, isAnon ->
-                                    viewModel.submitPost(content, category, isAnon)
+                                onSubmit = { content, category, isAnon, images, visibility, commentsDisabled ->
+                                    viewModel.submitPost(
+                                        content = content,
+                                        category = category,
+                                        isAnonymous = isAnon,
+                                        images = images,
+                                        visibility = visibility,
+                                        commentsDisabled = commentsDisabled
+                                    )
+                                }
+                            )
+                        }
+
+                        if (showCreateMomentDialog) {
+                            com.example.ui.components.CreateSparkleMomentDialog(
+                                onDismiss = { showCreateMomentDialog = false },
+                                onSubmit = { caption, mediaUri, bgHex, audience ->
+                                    viewModel.createMoment(caption, mediaUri, bgHex, audience)
+                                    showCreateMomentDialog = false
                                 }
                             )
                         }
@@ -315,6 +494,15 @@ class MainActivity : ComponentActivity() {
                                 onTakePhotoClick = {
                                     showCameraCapture = true
                                 },
+                                onUpdateAvatar = { uri ->
+                                    viewModel.updateProfileAvatar(uri)
+                                },
+                                onRemoveAvatar = {
+                                    viewModel.removeProfileAvatar()
+                                },
+                                onTogglePrivacy = {
+                                    viewModel.toggleAccountPrivacy()
+                                },
                                 onDismiss = { viewModel.showProfile(false) },
                                 onSaveProfile = { bio, fac, course, year ->
                                     viewModel.updateProfile(bio, fac, course, year)
@@ -329,6 +517,7 @@ class MainActivity : ComponentActivity() {
                             com.example.ui.camera.StudentProfilePhotoCaptureDialog(
                                 onDismiss = { showCameraCapture = false },
                                 onPhotoCaptured = { uri ->
+                                    viewModel.updateProfileAvatar(uri.toString())
                                     coroutineScope.launch {
                                         snackbarHostState.showSnackbar("Student profile photo updated!")
                                     }
@@ -342,7 +531,18 @@ class MainActivity : ComponentActivity() {
                                 onDismiss = { viewModel.showNotifications(false) }
                             )
                         }
-                    }
+
+                        if (uiState.isAiSearchActive) {
+                            com.example.ui.components.CampusAiSearchDialog(
+                                searchQuery = uiState.aiSearchQuery,
+                                onQueryChange = { viewModel.setAiSearchQuery(it) },
+                                onSearchSubmit = { query -> viewModel.performCampusAiSearch(query) },
+                                isLoading = uiState.isAiSearchLoading,
+                                searchResult = uiState.aiSearchResult,
+                                errorMessage = uiState.aiSearchError,
+                                onDismiss = { viewModel.toggleAiSearch(false) }
+                            )
+                        }
                 }
             }
         }

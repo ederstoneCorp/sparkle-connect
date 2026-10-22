@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSparkle } from '../../context/SparkleContext';
 import { University } from '../../types/models';
 import { X, MapPin, Users, Globe, ExternalLink, Search, CheckCircle2 } from 'lucide-react';
@@ -32,13 +32,121 @@ export const CampusMapModal: React.FC<CampusMapModalProps> = ({
   onClose,
   onSelectUniversity,
 }) => {
-  const { universities, selectedUniversityId } = useSparkle();
+  const { universities: baseUniversities, selectedUniversityId } = useSparkle();
+  const [customUniversities, setCustomUniversities] = useState<University[]>([]);
+  const universities = useMemo(() => [...baseUniversities, ...customUniversities], [baseUniversities, customUniversities]);
+
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import('leaflet').Map | null>(null);
   const markersRef = useRef<import('leaflet').CircleMarker[]>([]);
   const [activeUniversity, setActiveUniversity] = useState<University | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+
+  // Manual entry & geocoding state
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const [manualShortName, setManualShortName] = useState('');
+  const [manualLocation, setManualLocation] = useState('');
+  const [manualType, setManualType] = useState<'national' | 'technical' | 'private'>('national');
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodingStatus, setGeocodingStatus] = useState<string | null>(null);
+
+  // Geocoding helper function using OpenStreetMap Nominatim API with robust fallback
+  const geocodeUniversityLocation = async (locationQuery: string): Promise<{ lat: number; lng: number }> => {
+    try {
+      setGeocodingStatus('Querying OpenStreetMap Nominatim geocoder...');
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery + ', Kenya')}&limit=1`,
+        { headers: { 'User-Agent': 'SparkleConnect/1.0' } }
+      );
+      const data = await res.json();
+      if (data && data.length > 0 && data[0].lat && data[0].lon) {
+        setGeocodingStatus('Precise coordinates acquired & stored!');
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+        };
+      }
+    } catch (err) {
+      console.warn('Geocoding API network error, using regional estimation:', err);
+    }
+    setGeocodingStatus('Using estimated regional Kenya coordinates.');
+    return { lat: -1.28 + (Math.random() - 0.5) * 0.4, lng: 36.82 + (Math.random() - 0.5) * 0.4 };
+  };
+
+  const handleAddManualUniversity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualName.trim() || !manualLocation.trim()) return;
+
+    setIsGeocoding(true);
+    setGeocodingStatus('Geocoding campus location...');
+
+    const { lat, lng } = await geocodeUniversityLocation(manualLocation || manualName);
+
+    const newUni: University = {
+      id: `manual_${Date.now()}`,
+      name: manualName.trim(),
+      shortName: manualShortName.trim() || manualName.trim().slice(0, 6),
+      location: manualLocation.trim(),
+      type: manualType,
+      lat,
+      lng,
+      founded: new Date().getFullYear(),
+      students: 1500,
+      website: '',
+    };
+
+    setCustomUniversities((prev) => [...prev, newUni]);
+
+    // Add marker to map and fly to precise coordinates
+    if (mapRef.current) {
+      const L = await import('leaflet');
+      const color = TYPE_COLORS[newUni.type ?? 'national'] ?? '#6C3BFF';
+      const marker = L.circleMarker([lat, lng], {
+        radius: 14,
+        fillColor: color,
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 1,
+      })
+        .addTo(mapRef.current)
+        .bindTooltip(`<strong>${newUni.shortName}</strong><br>${newUni.location}`, {
+          permanent: false,
+          direction: 'top',
+          className: 'sparkle-map-tooltip',
+        })
+        .on('click', () => {
+          setActiveUniversity(newUni);
+        });
+
+      markersRef.current.push(marker);
+      mapRef.current.flyTo([lat, lng], 14, { duration: 1.2 });
+    }
+
+    setActiveUniversity(newUni);
+    setIsGeocoding(false);
+    setShowManualForm(false);
+    setManualName('');
+    setManualShortName('');
+    setManualLocation('');
+    setGeocodingStatus(null);
+  };
+
+  // ESC key listener to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   // Lazy-load Leaflet only in browser
   useEffect(() => {
@@ -113,7 +221,7 @@ export const CampusMapModal: React.FC<CampusMapModalProps> = ({
         setActiveUniversity(null);
       }
     };
-  }, [isOpen]);
+  }, [isOpen, universities]);
 
   // Pan map to searched university
   const handleMapSearch = async (u: University) => {
@@ -226,6 +334,73 @@ export const CampusMapModal: React.FC<CampusMapModalProps> = ({
                 ))}
               </div>
             </div>
+
+            {/* Manual entry toggle */}
+            <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
+              <button
+                onClick={() => setShowManualForm(!showManualForm)}
+                className="w-full py-1.5 px-3 rounded-xl bg-sparkle-purple/10 hover:bg-sparkle-purple/20 text-sparkle-purple text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                {showManualForm ? 'Close Manual Entry' : "Can't find university? Add Manually"}
+              </button>
+            </div>
+
+            {/* Manual Entry Form */}
+            {showManualForm && (
+              <form onSubmit={handleAddManualUniversity} className="p-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 space-y-2">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Add & Geocode Campus</p>
+                <input
+                  type="text"
+                  placeholder="University Name (e.g. Kitale Tech)"
+                  value={manualName}
+                  onChange={(e) => setManualName(e.target.value)}
+                  required
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium dark:text-slate-200"
+                />
+                <input
+                  type="text"
+                  placeholder="Short Name / Acronym (e.g. KTC)"
+                  value={manualShortName}
+                  onChange={(e) => setManualShortName(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium dark:text-slate-200"
+                />
+                <input
+                  type="text"
+                  placeholder="Location / County (e.g. Kitale, Trans Nzoia)"
+                  value={manualLocation}
+                  onChange={(e) => setManualLocation(e.target.value)}
+                  required
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium dark:text-slate-200"
+                />
+                <select
+                  value={manualType}
+                  onChange={(e) => setManualType(e.target.value as any)}
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium dark:text-slate-200"
+                >
+                  <option value="national">Public / National</option>
+                  <option value="technical">Technical</option>
+                  <option value="private">Private / Chartered</option>
+                </select>
+                {geocodingStatus && (
+                  <p className="text-[10px] text-sparkle-purple font-semibold animate-pulse">{geocodingStatus}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={isGeocoding}
+                  className="w-full py-2 rounded-lg bg-sparkle-purple text-white text-xs font-bold hover:bg-sparkle-purple-dark transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {isGeocoding ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Geocoding...
+                    </>
+                  ) : (
+                    'Geocode & Place Marker'
+                  )}
+                </button>
+              </form>
+            )}
 
             {/* Active university detail */}
             {activeUniversity ? (

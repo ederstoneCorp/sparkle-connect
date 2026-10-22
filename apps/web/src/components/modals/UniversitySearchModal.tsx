@@ -41,12 +41,21 @@ export const UniversitySearchModal: React.FC<UniversitySearchModalProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setQuery('');
-      setHighlighted(null);
-      setTimeout(() => inputRef.current?.focus(), 80);
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    setQuery('');
+    setHighlighted(null);
+    setTimeout(() => inputRef.current?.focus(), 80);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   const filtered = query.trim().length === 0
     ? universities

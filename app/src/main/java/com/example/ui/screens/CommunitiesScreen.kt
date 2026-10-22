@@ -26,6 +26,7 @@ import com.example.ui.theme.*
 fun CommunitiesScreen(
     communities: List<Community>,
     onToggleJoin: (String) -> Unit,
+    isLoading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -62,11 +63,17 @@ fun CommunitiesScreen(
             }
         }
 
-        items(communities, key = { it.id }) { community ->
-            CommunityCard(
-                community = community,
-                onToggleJoin = { onToggleJoin(community.id) }
-            )
+        if (isLoading) {
+            items(4) {
+                com.example.ui.components.CommunityShimmerItem()
+            }
+        } else {
+            items(communities, key = { it.id }) { community ->
+                CommunityCard(
+                    community = community,
+                    onToggleJoin = { onToggleJoin(community.id) }
+                )
+            }
         }
     }
 }
