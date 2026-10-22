@@ -74,6 +74,7 @@ interface SparkleContextType extends SparkleState {
   switchAccount: (accountId: string) => void;
   updateAvatar: (newAvatarUrl: string) => void;
   updateCourse: (newCourse: string) => void;
+  updateProfile: (updates: { bio?: string; faculty?: string; course?: string; yearOfStudy?: number }) => Promise<{ success: boolean; error?: string }>;
   addPost: (
     content: string,
     category: PostCategory,
@@ -530,49 +531,51 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Avatar update
-  const updateAvatar = (newAvatarUrl: string) => {
+  // Profile edits are saved to Supabase and reflected immediately in the web UI.
+  const updateProfile = async (updates: { bio?: string; faculty?: string; course?: string; yearOfStudy?: number }) => {
+    const user = state.currentUser;
+    if (!user) return { success: false, error: 'Sign in to update your profile.' };
+    const payload: Record<string, string | number> = {};
+    if (updates.bio !== undefined) payload.bio = updates.bio.trim();
+    if (updates.faculty !== undefined) payload.faculty = updates.faculty.trim();
+    if (updates.course !== undefined) payload.course = updates.course.trim();
+    if (updates.yearOfStudy !== undefined) payload.year_of_study = updates.yearOfStudy;
+
+    const { error } = await supabase.from('profiles').update(payload).eq('id', user.id);
+    if (error) return { success: false, error: error.message };
+
     setState((prev) => {
-      if (!prev.currentUser) return prev;
-      const updatedPhotos = [newAvatarUrl, ...(prev.currentUser.photos || [])].filter(
-        (url, idx, self) => self.indexOf(url) === idx
-      );
-      const updatedUser: StudentProfile = {
-        ...prev.currentUser,
-        avatarUrl: newAvatarUrl,
-        photos: updatedPhotos,
-      };
-      const updatedAccounts = prev.accounts.map((acc) =>
-        acc.id === prev.currentAccountId
-          ? { ...acc, profile: updatedUser }
-          : acc
-      );
+      if (!prev.currentUser || prev.currentUser.id !== user.id) return prev;
+      const updatedUser = { ...prev.currentUser, ...updates };
       return {
         ...prev,
         currentUser: updatedUser,
-        accounts: updatedAccounts,
+        accounts: prev.accounts.map((account) => account.id === user.id ? { ...account, profile: updatedUser } : account),
+      };
+    });
+    return { success: true };
+  };
+
+  const updateAvatar = (newAvatarUrl: string) => {
+    const user = state.currentUser;
+    if (!user) return;
+    void supabase.from('profiles').update({ avatar_url: newAvatarUrl }).eq('id', user.id).then(({ error }) => {
+      if (error) console.error('Could not save profile photo:', error.message);
+    });
+    setState((prev) => {
+      if (!prev.currentUser || prev.currentUser.id !== user.id) return prev;
+      const updatedPhotos = [newAvatarUrl, ...(prev.currentUser.photos || [])].filter((url, idx, self) => self.indexOf(url) === idx);
+      const updatedUser = { ...prev.currentUser, avatarUrl: newAvatarUrl, photos: updatedPhotos };
+      return {
+        ...prev,
+        currentUser: updatedUser,
+        accounts: prev.accounts.map((account) => account.id === user.id ? { ...account, profile: updatedUser } : account),
       };
     });
   };
 
   const updateCourse = (newCourse: string) => {
-    setState((prev) => {
-      if (!prev.currentUser) return prev;
-      const updatedUser: StudentProfile = {
-        ...prev.currentUser,
-        course: newCourse,
-      };
-      const updatedAccounts = prev.accounts.map((acc) =>
-        acc.id === prev.currentAccountId
-          ? { ...acc, profile: updatedUser }
-          : acc
-      );
-      return {
-        ...prev,
-        currentUser: updatedUser,
-        accounts: updatedAccounts,
-      };
-    });
+    void updateProfile({ course: newCourse });
   };
 
   // Post Actions
@@ -915,6 +918,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         switchAccount,
         updateAvatar,
         updateCourse,
+        updateProfile,
         addPost,
         deletePost,
         updatePostCaption,
