@@ -53,13 +53,13 @@ export const CampusMapModal: React.FC<CampusMapModalProps> = ({
   const [geocodingStatus, setGeocodingStatus] = useState<string | null>(null);
 
   // Geocoding helper function using OpenStreetMap Nominatim API with robust fallback
-  const geocodeUniversityLocation = async (locationQuery: string): Promise<{ lat: number; lng: number }> => {
+  const geocodeUniversityLocation = async (locationQuery: string): Promise<{ lat: number; lng: number } | null> => {
     try {
       setGeocodingStatus('Querying OpenStreetMap Nominatim geocoder...');
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery + ', Kenya')}&limit=1`,
-        { headers: { 'User-Agent': 'SparkleConnect/1.0' } }
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery + ', Kenya')}&limit=1`
       );
+      if (!res.ok) throw new Error(`Geocoding request failed (${res.status})`);
       const data = await res.json();
       if (data && data.length > 0 && data[0].lat && data[0].lon) {
         setGeocodingStatus('Precise coordinates acquired & stored!');
@@ -69,10 +69,10 @@ export const CampusMapModal: React.FC<CampusMapModalProps> = ({
         };
       }
     } catch (err) {
-      console.warn('Geocoding API network error, using regional estimation:', err);
+      console.warn('Geocoding API request failed:', err);
     }
-    setGeocodingStatus('Using estimated regional Kenya coordinates.');
-    return { lat: -1.28 + (Math.random() - 0.5) * 0.4, lng: 36.82 + (Math.random() - 0.5) * 0.4 };
+    setGeocodingStatus('Could not find that location. Check the spelling or try a nearby town/campus. No marker was placed.');
+    return null;
   };
 
   const handleAddManualUniversity = async (e: React.FormEvent) => {
@@ -82,7 +82,12 @@ export const CampusMapModal: React.FC<CampusMapModalProps> = ({
     setIsGeocoding(true);
     setGeocodingStatus('Geocoding campus location...');
 
-    const { lat, lng } = await geocodeUniversityLocation(manualLocation || manualName);
+    const coordinates = await geocodeUniversityLocation(manualLocation || manualName);
+    if (!coordinates) {
+      setIsGeocoding(false);
+      return;
+    }
+    const { lat, lng } = coordinates;
 
     const newUni: University = {
       id: `manual_${Date.now()}`,
