@@ -1,4 +1,5 @@
-name: Web build
+
+name: Sparkle Connect web build
 
 on:
   pull_request:
@@ -7,21 +8,32 @@ on:
       - "apps/web/**"
       - ".github/workflows/web-build.yml"
   push:
-    branches: [main, "web-parity/**"]
+    branches:
+      - main
+      - "audit/**"
+      - "web-parity/**"
     paths:
       - "apps/web/**"
       - ".github/workflows/web-build.yml"
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  web-build:
+    name: TypeScript and Vite production build
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
-      - run: npm run build
+      - name: Install dependencies
+        run: npm install
+      - name: Build web application
+        run: npm run build
