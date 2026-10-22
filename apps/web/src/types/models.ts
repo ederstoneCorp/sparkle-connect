@@ -77,6 +77,7 @@ export interface PostComment {
   authorUniversity: string;
   content: string;
   timeAgo: string;
+  createdAtTimestamp?: number;
   isAnonymous?: boolean;
 }
 
@@ -98,6 +99,7 @@ export interface CampusPost {
   isSavedByMe?: boolean;
   isSaved?: boolean;
   timeAgo: string;
+  createdAtTimestamp?: number;
   comments: PostComment[];
   mediaUrl?: string | null;
   images?: string[];
