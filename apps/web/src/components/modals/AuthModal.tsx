@@ -29,9 +29,11 @@ export const AuthModal: React.FC = () => {
     signIn,
     signInWithGmail,
     resetPassword,
+    updatePassword,
     signUp,
     universities,
     currentUser,
+    isPasswordRecovery,
   } = useSparkle();
 
   const { theme, toggleTheme } = useTheme();
@@ -52,6 +54,7 @@ export const AuthModal: React.FC = () => {
   const [isCourseSearchOpen, setIsCourseSearchOpen] = useState(false);
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   if (!isAuthModalOpen && currentUser) return null;
 
@@ -120,6 +123,21 @@ export const AuthModal: React.FC = () => {
     setSuccessMsg('If an account exists for that email, password reset instructions have been sent. Check your inbox.');
     setForgotPasswordMode(false);
     setResetEmail('');
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
+    setIsLoading(true);
+    const result = await updatePassword(newPassword);
+    setIsLoading(false);
+    if (!result.success) {
+      setError(result.error || 'Could not update your password.');
+      return;
+    }
+    setSuccessMsg('Your password has been updated. You can continue using Sparkle Connect.');
+    setNewPassword('');
   };
 
   return (
@@ -219,10 +237,10 @@ export const AuthModal: React.FC = () => {
             {/* Header / Greeting */}
             <div className="mb-6">
               <h2 className="text-2xl font-black tracking-tight">
-                {forgotPasswordMode ? 'Reset Password' : 'Welcome back.'}
+                {isPasswordRecovery || forgotPasswordMode ? 'Reset Password' : 'Welcome back.'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                {forgotPasswordMode ? 'Enter your email to receive recovery instructions' : 'Sign in or create an account to continue your campus journey.'}
+                {isPasswordRecovery ? 'Choose a new password for your account' : forgotPasswordMode ? 'Enter your email to receive recovery instructions' : 'Sign in or create an account to continue your campus journey.'}
               </p>
             </div>
 
@@ -241,8 +259,30 @@ export const AuthModal: React.FC = () => {
               </div>
             )}
 
-            {/* FORGOT PASSWORD VIEW */}
-            {forgotPasswordMode ? (
+            {/* PASSWORD RECOVERY AND RESET REQUEST VIEWS */}
+            {isPasswordRecovery ? (
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">New Password</label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="password"
+                      required
+                      minLength={8}
+                      autoComplete="new-password"
+                      placeholder="At least 8 characters"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full pl-10 pr-3.5 py-3 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7545FF]/40 font-medium dark:text-white"
+                    />
+                  </div>
+                </div>
+                <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-xl bg-[#7545FF] hover:bg-[#6235E0] text-white font-extrabold text-xs disabled:opacity-50">
+                  {isLoading ? 'Updating password...' : 'Save New Password'}
+                </button>
+              </form>
+            ) : forgotPasswordMode ? (
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Campus Email Address</label>
@@ -261,9 +301,10 @@ export const AuthModal: React.FC = () => {
 
                 <button
                   type="submit"
+                  disabled={isLoading}
                   className="w-full py-3.5 rounded-xl bg-[#7545FF] hover:bg-[#6235E0] text-white font-extrabold text-xs shadow-lg shadow-[#7545FF]/25 flex items-center justify-center gap-2 transition-all"
                 >
-                  Send Password Reset Instructions
+                  {isLoading ? 'Sending instructions...' : 'Send Password Reset Instructions'}
                 </button>
 
                 <button
