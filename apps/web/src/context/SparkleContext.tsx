@@ -291,8 +291,8 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         supabase.from('universities').select('id, short_name'),
       ]);
       if (!active) return;
-      const profileById = new Map((profiles || []).map((profile: any) => [profile.id, profile]));
-      const universityById = new Map((universities || []).map((university: any) => [university.id, university.short_name]));
+      const profileById = new Map<string, any>((profiles || []).map((profile: any) => [profile.id, profile] as [string, any]));
+      const universityById = new Map<string, string>((universities || []).map((university: any) => [university.id, university.short_name] as [string, string]));
       const commentsByPost = new Map<string, any[]>();
       (comments || []).forEach((comment: any) => {
         const list = commentsByPost.get(comment.post_id) || [];
