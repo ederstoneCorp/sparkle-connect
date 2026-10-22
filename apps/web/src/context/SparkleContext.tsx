@@ -104,6 +104,7 @@ interface SparkleContextType extends SparkleState {
 }
 
 const STORAGE_KEY = 'sparkle_connect_local_v2';
+const isCloudPostId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 
 const SparkleContext = createContext<SparkleContextType | undefined>(undefined);
 
@@ -752,6 +753,10 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deletePost = (postId: string) => {
     const user = state.currentUser;
     if (!user) return;
+    if (!isCloudPostId(postId)) {
+      setState((prev) => ({ ...prev, posts: prev.posts.filter((post) => post.id !== postId) }));
+      return;
+    }
     void (async () => {
       const { error } = await supabase.from('posts').delete().eq('id', postId).eq('author_id', user.id);
       if (error) {
@@ -765,6 +770,10 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updatePostCaption = (postId: string, newContent: string) => {
     const user = state.currentUser;
     if (!user || !newContent.trim()) return;
+    if (!isCloudPostId(postId)) {
+      setState((prev) => ({ ...prev, posts: prev.posts.map((post) => post.id === postId ? { ...post, content: newContent.trim() } : post) }));
+      return;
+    }
     void (async () => {
       const { error } = await supabase.from('posts').update({ content: newContent.trim() }).eq('id', postId).eq('author_id', user.id);
       if (error) {
@@ -780,6 +789,10 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const user = state.currentUser;
     if (!post || !user || post.authorId !== user.id) return;
     const nextValue = !post.commentsDisabled;
+    if (!isCloudPostId(postId)) {
+      setState((prev) => ({ ...prev, posts: prev.posts.map((item) => item.id === postId ? { ...item, commentsDisabled: nextValue } : item) }));
+      return;
+    }
     void (async () => {
       const { error } = await supabase.from('posts').update({ comments_disabled: nextValue }).eq('id', postId).eq('author_id', user.id);
       if (error) {
@@ -795,6 +808,10 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const post = state.posts.find((item) => item.id === postId);
     if (!user || !post) return;
     const wasSaved = Boolean(post.isSaved || post.isSavedByMe);
+    if (!isCloudPostId(postId)) {
+      setState((prev) => ({ ...prev, posts: prev.posts.map((item) => item.id === postId ? { ...item, isSaved: !wasSaved, isSavedByMe: !wasSaved } : item) }));
+      return;
+    }
     void (async () => {
       const result = wasSaved
         ? await supabase.from('saved_posts').delete().eq('post_id', postId).eq('user_id', user.id)
@@ -812,6 +829,13 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const post = state.posts.find((item) => item.id === postId);
     if (!user || !post) return;
     const wasLiked = Boolean(post.isLiked || post.isLikedByMe);
+    if (!isCloudPostId(postId)) {
+      setState((prev) => ({ ...prev, posts: prev.posts.map((item) => item.id === postId ? {
+        ...item, isLiked: !wasLiked, isLikedByMe: !wasLiked,
+        likesCount: Math.max(0, item.likesCount + (wasLiked ? -1 : 1)),
+      } : item) }));
+      return;
+    }
     void (async () => {
       const result = wasLiked
         ? await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id)
@@ -837,6 +861,19 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     const cleanContent = content.trim();
     if (!cleanContent) return;
+    if (!isCloudPostId(postId)) {
+      const newComment = {
+        id: `cmt_${Date.now()}`,
+        authorName: isAnonymous ? 'Anonymous Comrade' : author.displayName,
+        authorAvatar: isAnonymous ? 'https://api.dicebear.com/7.x/bottts/svg?seed=anon' : author.avatarUrl,
+        authorUniversity: isAnonymous ? 'Campus' : author.university.shortName,
+        content: cleanContent, timeAgo: 'Just now', isAnonymous,
+      };
+      setState((prev) => ({ ...prev, posts: prev.posts.map((post) => post.id === postId ? {
+        ...post, commentsCount: post.commentsCount + 1, comments: [...post.comments, newComment],
+      } : post) }));
+      return;
+    }
     void (async () => {
       const { data, error } = await supabase.from('comments').insert({
         post_id: postId,
