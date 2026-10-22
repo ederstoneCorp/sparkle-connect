@@ -39,6 +39,7 @@ interface SparkleState {
   selectedUniversityId: string; // 'ALL' or university ID
   activeTab: 'feed' | 'gigs' | 'communities' | 'academics' | 'events' | 'messages';
   isAuthModalOpen: boolean;
+  isPasswordRecovery: boolean;
   isProfileModalOpen: boolean;
   isNotificationsOpen: boolean;
 }
@@ -53,6 +54,7 @@ interface SparkleContextType extends SparkleState {
   signIn: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   signInWithGmail: (googleEmail: string, derivedName?: string) => Promise<{ success: boolean; account?: RegisteredAccount; error?: string }>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (data: {
     email: string;
     password?: string;
@@ -119,6 +121,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           selectedUniversityId: 'ALL',
           activeTab: 'feed',
           isAuthModalOpen: true,
+          isPasswordRecovery: false,
           isProfileModalOpen: false,
           isNotificationsOpen: false,
         };
@@ -140,6 +143,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       selectedUniversityId: 'ALL',
       activeTab: 'feed',
       isAuthModalOpen: true,
+      isPasswordRecovery: false,
       isProfileModalOpen: false,
       isNotificationsOpen: false,
     };
@@ -186,7 +190,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       try {
         const profile = await ensureProfile(user);
-        if (active) setState((prev) => ({ ...prev, currentUser: profile, currentAccountId: user.id, isAuthModalOpen: false }));
+        if (active) setState((prev) => ({ ...prev, currentUser: profile, currentAccountId: user.id, isAuthModalOpen: prev.isPasswordRecovery }));
       } catch (error) {
         console.error('Could not restore Sparkle profile:', error);
         if (active) setState((prev) => ({ ...prev, currentUser: null, currentAccountId: null, isAuthModalOpen: true }));
@@ -194,7 +198,10 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     void supabase.auth.getSession().then(({ data: { session } }) => hydrate(session?.user || null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setState((prev) => ({ ...prev, isPasswordRecovery: true, isAuthModalOpen: true }));
+      }
       void hydrate(session?.user || null);
     });
     return () => {
@@ -308,7 +315,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       faculty: String(metadata.faculty || 'Not specified'),
       course: String(metadata.course || 'Not specified'),
       yearOfStudy: Number(metadata.year_of_study || 1),
-      isVerifiedStudent: Boolean(user.email),
+      isVerifiedStudent: false,
       skills: Array.isArray(metadata.skills) ? metadata.skills as string[] : ['Campus Networking'],
       interests: Array.isArray(metadata.interests) ? metadata.interests as string[] : ['Campus Life'],
       joinedDate: new Date(user.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
@@ -435,9 +442,18 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) return { success: false, error: 'Enter the email address for your account.' };
     const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-      redirectTo: window.location.origin,
+      redirectTo: `${window.location.origin}/?reset-password=1`,
     });
     if (error) return { success: false, error: error.message };
+    return { success: true };
+  };
+
+  const updatePassword = async (password: string) => {
+    if (password.length < 8) return { success: false, error: 'Use a password with at least 8 characters.' };
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return { success: false, error: error.message };
+    setState((prev) => ({ ...prev, isPasswordRecovery: false, isAuthModalOpen: false }));
+    window.history.replaceState({}, document.title, window.location.pathname);
     return { success: true };
   };
 
@@ -838,6 +854,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         signIn,
         signInWithGmail,
         resetPassword,
+        updatePassword,
         signUp,
         signOut,
         switchAccount,
