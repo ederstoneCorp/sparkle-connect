@@ -42,6 +42,22 @@ export interface RegisteredAccount {
   isRecordedInDatabase: boolean;
 }
 
+export type MomentAudience = 'PUBLIC' | 'CAMPUS_ONLY' | 'CONNECTIONS_ONLY';
+
+export interface SparkleMoment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+  authorUniversity: string;
+  textCaption: string;
+  backgroundColorHex: string;
+  createdAtTimestamp: number;
+  audience: MomentAudience;
+  viewedByUsers: string[];
+  isViewedByMe: boolean;
+}
+
 export type PostVisibility = 'PUBLIC' | 'CONNECTIONS' | 'CAMPUS_COMMUNITY' | 'PRIVATE';
 
 export type PostCategory =
