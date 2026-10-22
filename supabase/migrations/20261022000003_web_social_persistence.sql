@@ -63,9 +63,12 @@ BEGIN
   UPDATE public.posts
   SET likes_count = (SELECT COUNT(*)::INT FROM public.post_likes WHERE post_id = target_post)
   WHERE id = target_post;
-  RETURN COALESCE(NEW, OLD);
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
-$$;
+$;
 
 DROP TRIGGER IF EXISTS post_likes_refresh_count ON public.post_likes;
 CREATE TRIGGER post_likes_refresh_count
