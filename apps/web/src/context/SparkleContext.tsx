@@ -264,6 +264,95 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
+  // Load shared feed content and the signed-in user's post actions from Supabase.
+  useEffect(() => {
+    const user = state.currentUser;
+    if (!user) return;
+    let active = true;
+    const loadCloudFeed = async () => {
+      const { data: rows, error } = await supabase
+        .from('posts')
+        .select('id, author_id, university_id, content, category, is_anonymous, likes_count, comments_count, created_at, tags, visibility, comments_disabled, media_urls')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) {
+        console.error('Could not load campus feed from Supabase:', error.message);
+        return;
+      }
+      const postRows = rows || [];
+      if (!postRows.length || !active) return;
+      const postIds = postRows.map((row: any) => row.id);
+      const authorIds = [...new Set(postRows.map((row: any) => row.author_id))];
+      const [{ data: profiles }, { data: comments }, { data: likes }, { data: saved }, { data: universities }] = await Promise.all([
+        supabase.from('profiles').select('id, display_name, avatar_url, course, is_verified_student, university_id').in('id', authorIds),
+        supabase.from('comments').select('id, post_id, author_id, content, is_anonymous, created_at').in('post_id', postIds).order('created_at', { ascending: true }),
+        supabase.from('post_likes').select('post_id, user_id').in('post_id', postIds),
+        supabase.from('saved_posts').select('post_id').eq('user_id', user.id).in('post_id', postIds),
+        supabase.from('universities').select('id, short_name'),
+      ]);
+      if (!active) return;
+      const profileById = new Map((profiles || []).map((profile: any) => [profile.id, profile]));
+      const universityById = new Map((universities || []).map((university: any) => [university.id, university.short_name]));
+      const commentsByPost = new Map<string, any[]>();
+      (comments || []).forEach((comment: any) => {
+        const list = commentsByPost.get(comment.post_id) || [];
+        list.push(comment);
+        commentsByPost.set(comment.post_id, list);
+      });
+      const likedPostIds = new Set((likes || []).filter((like: any) => like.user_id === user.id).map((like: any) => like.post_id));
+      const savedPostIds = new Set((saved || []).map((item: any) => item.post_id));
+      const cloudPosts: CampusPost[] = postRows.map((row: any) => {
+        const profile = profileById.get(row.author_id) as any;
+        const anonymous = Boolean(row.is_anonymous);
+        const postComments = (commentsByPost.get(row.id) || []).map((comment: any) => {
+          const commentProfile = profileById.get(comment.author_id) as any;
+          const commentAnonymous = Boolean(comment.is_anonymous);
+          return {
+            id: comment.id,
+            authorName: commentAnonymous ? 'Anonymous Comrade' : commentProfile?.display_name || 'Comrade Student',
+            authorAvatar: commentAnonymous ? 'https://api.dicebear.com/7.x/bottts/svg?seed=anon' : commentProfile?.avatar_url || '',
+            authorUniversity: commentAnonymous ? 'Campus' : String(universityById.get(commentProfile?.university_id) || 'Kenyan Campus'),
+            content: comment.content,
+            timeAgo: 'Earlier',
+            isAnonymous: commentAnonymous,
+          };
+        });
+        const mediaUrls = Array.isArray(row.media_urls) ? row.media_urls : [];
+        return {
+          id: row.id,
+          authorId: row.author_id,
+          authorName: anonymous ? 'Secret Student' : profile?.display_name || 'Comrade Student',
+          authorAvatar: anonymous ? 'https://api.dicebear.com/7.x/bottts/svg?seed=sparkle_anon' : profile?.avatar_url || '',
+          authorUniversity: anonymous ? 'Kenyan Campus' : String(universityById.get(profile?.university_id) || 'Kenyan Campus'),
+          authorCourse: anonymous ? 'Anonymous' : profile?.course || '',
+          isAuthorVerified: !anonymous && Boolean(profile?.is_verified_student),
+          content: row.content,
+          category: row.category as PostCategory,
+          isAnonymous: anonymous,
+          likesCount: Number(row.likes_count || 0),
+          commentsCount: Number(row.comments_count || 0),
+          isLiked: likedPostIds.has(row.id),
+          isLikedByMe: likedPostIds.has(row.id),
+          isSaved: savedPostIds.has(row.id),
+          isSavedByMe: savedPostIds.has(row.id),
+          timeAgo: 'Earlier',
+          comments: postComments,
+          mediaUrl: mediaUrls[0],
+          images: mediaUrls,
+          tags: Array.isArray(row.tags) ? row.tags : [],
+          visibility: row.visibility as PostVisibility,
+          commentsDisabled: Boolean(row.comments_disabled),
+        };
+      });
+      setState((prev) => {
+        const localSeedPosts = prev.posts.filter((post) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(post.id));
+        return { ...prev, posts: [...cloudPosts, ...localSeedPosts] };
+      });
+    };
+    void loadCloudFeed();
+    return () => { active = false; };
+  }, [state.currentUser?.id]);
+
   // Supabase Realtime subscriptions for live feed updates & messages
   useEffect(() => {
     const channel = supabase
