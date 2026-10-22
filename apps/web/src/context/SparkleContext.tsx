@@ -75,6 +75,7 @@ interface SparkleContextType extends SparkleState {
   updateAvatar: (newAvatarUrl: string) => void;
   updateCourse: (newCourse: string) => void;
   updateProfile: (updates: { bio?: string; faculty?: string; course?: string; yearOfStudy?: number }) => Promise<{ success: boolean; error?: string }>;
+  toggleProfilePrivacy: () => Promise<{ success: boolean; error?: string }>;
   addPost: (
     content: string,
     category: PostCategory,
@@ -369,6 +370,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       course: String(metadata.course || 'Not specified'),
       yearOfStudy: Number(metadata.year_of_study || 1),
       isVerifiedStudent: false,
+      isPrivateAccount: Boolean(metadata.is_private_account),
       skills: Array.isArray(metadata.skills) ? metadata.skills as string[] : ['Campus Networking'],
       interests: Array.isArray(metadata.interests) ? metadata.interests as string[] : ['Campus Life'],
       joinedDate: new Date(user.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
@@ -379,7 +381,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const mapped = profileFromUser(user);
     const { data: existingProfile, error: readError } = await supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, bio, faculty, course, year_of_study, is_verified_student, created_at')
+      .select('id, username, display_name, avatar_url, bio, faculty, course, year_of_study, is_verified_student, is_private_account, created_at')
       .eq('id', user.id)
       .maybeSingle();
     if (readError) throw readError;
@@ -396,6 +398,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         course: mapped.course,
         year_of_study: mapped.yearOfStudy,
         is_verified_student: false,
+        is_private_account: false,
       };
       const { error } = await supabase.from('profiles').insert(profilePayload);
       if (error) throw error;
@@ -412,6 +415,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       course: existingProfile.course || mapped.course,
       yearOfStudy: existingProfile.year_of_study || mapped.yearOfStudy,
       isVerifiedStudent: Boolean(existingProfile.is_verified_student),
+      isPrivateAccount: Boolean(existingProfile.is_private_account),
       joinedDate: new Date(existingProfile.created_at || user.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
     } as StudentProfile;
   };
@@ -529,6 +533,19 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         currentAccountId: target.id,
       }));
     }
+  };
+
+  const toggleProfilePrivacy = async () => {
+    const user = state.currentUser;
+    if (!user) return { success: false, error: 'Sign in to change profile privacy.' };
+    const nextValue = !user.isPrivateAccount;
+    const { error } = await supabase.from('profiles').update({ is_private_account: nextValue }).eq('id', user.id);
+    if (error) return { success: false, error: error.message };
+    setState((prev) => {
+      if (!prev.currentUser || prev.currentUser.id !== user.id) return prev;
+      return { ...prev, currentUser: { ...prev.currentUser, isPrivateAccount: nextValue } };
+    });
+    return { success: true };
   };
 
   // Profile edits are saved to Supabase and reflected immediately in the web UI.
@@ -919,6 +936,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateAvatar,
         updateCourse,
         updateProfile,
+        toggleProfilePrivacy,
         addPost,
         deletePost,
         updatePostCaption,
