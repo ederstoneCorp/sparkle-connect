@@ -290,6 +290,9 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } catch (error) {
         console.error('Could not restore Sparkle profile:', error);
         await supabase.auth.signOut();
+        if (error instanceof Error && error.message.includes('No Sparkle Connect account')) {
+          window.dispatchEvent(new CustomEvent('sparkle-auth-error', { detail: error.message }));
+        }
         if (active) setState((prev) => ({ ...prev, currentUser: null, currentAccountId: null, isAuthModalOpen: true }));
       }
     };
