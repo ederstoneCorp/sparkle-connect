@@ -123,7 +123,8 @@ export const ProfileModal: React.FC = () => {
               <LogOut className="w-4 h-4" />
               <span>Sign Out</span>
             </button>
-          </div>
+              </div>
+            </div>
 
           {/* User Bio & Meta */}
           <div className="space-y-1 mb-4">
