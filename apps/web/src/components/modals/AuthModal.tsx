@@ -28,6 +28,7 @@ export const AuthModal: React.FC = () => {
     setIsAuthModalOpen,
     signIn,
     signInWithGmail,
+    resetPassword,
     signUp,
     universities,
     currentUser,
@@ -45,8 +46,6 @@ export const AuthModal: React.FC = () => {
   const [faculty, setFaculty] = useState('School of Computing & Informatics');
   const [course, setCourse] = useState('BSc Computer Science');
   const [yearOfStudy, setYearOfStudy] = useState(2);
-  const [gmailAddress, setGmailAddress] = useState('');
-  const [gmailName, setGmailName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,18 +69,10 @@ export const AuthModal: React.FC = () => {
   const handleGmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!gmailAddress.trim()) {
-      setError('Please provide your Gmail address');
-      return;
-    }
     setIsLoading(true);
-    const res = await signInWithGmail(gmailAddress, gmailName);
+    const res = await signInWithGmail('', '');
     setIsLoading(false);
-    if (!res.success) {
-      setError(res.error || 'Failed to authenticate with Gmail');
-    } else {
-      setSuccessMsg(`Welcome, ${res.account?.profile.displayName}! Saved to database.`);
-    }
+    if (!res.success) setError(res.error || 'Could not start Google sign-in.');
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -106,16 +97,27 @@ export const AuthModal: React.FC = () => {
     setIsLoading(false);
     if (!res.success) {
       setError(res.error || 'Failed to register account');
+    } else if (res.confirmationRequired) {
+      setSuccessMsg('Your account has been created. Check your email and confirm your address before signing in.');
     }
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
     if (!resetEmail.trim()) {
-      setError('Please enter your campus email for password reset');
+      setError('Enter the email address for your account.');
       return;
     }
-    setSuccessMsg(`Password reset instructions sent to ${resetEmail}. Check your inbox!`);
+    setIsLoading(true);
+    const result = await resetPassword(resetEmail);
+    setIsLoading(false);
+    if (!result.success) {
+      setError(result.error || 'Could not send password reset email.');
+      return;
+    }
+    setSuccessMsg('If an account exists for that email, password reset instructions have been sent. Check your inbox.');
     setForgotPasswordMode(false);
     setResetEmail('');
   };
@@ -194,7 +196,7 @@ export const AuthModal: React.FC = () => {
           <div className="relative z-10 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
             <div className="flex items-center gap-2">
               <Database className="w-3.5 h-3.5 text-[#53D6E8]" />
-              <span>Encrypted DB & Supabase Synced</span>
+              <span>Secure sign-in • Campus community</span>
             </div>
             <span className="font-mono text-[10px]">v2.6 Secure</span>
           </div>
@@ -308,59 +310,21 @@ export const AuthModal: React.FC = () => {
                   </button>
                 </div>
 
-                {/* GMAIL INSTANT LOGIN */}
+                {/* GOOGLE OAUTH */}
                 {mode === 'gmail' && (
                   <div className="space-y-4">
                     <div className="p-4 rounded-2xl bg-[#7545FF]/5 dark:bg-[#7545FF]/10 border border-[#7545FF]/20 text-slate-700 dark:text-slate-300 text-xs leading-relaxed">
-                      <span className="font-extrabold text-[#7545FF] dark:text-cyan-400">✨ Zero Friction Comrades Access:</span> Enter your Gmail to securely authenticate, derive your student profile, and auto-sync to database.
+                      <span className="font-extrabold text-[#7545FF] dark:text-cyan-400">Continue securely with Google.</span> Sparkle Connect will use Google's sign-in page to verify your account. Entering an email address alone does not authenticate you.
                     </div>
-
-                    <form onSubmit={handleGmailSignIn} className="space-y-3.5">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Your Gmail Address</label>
-                        <div className="relative">
-                          <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="email"
-                            required
-                            placeholder="e.g. holdstonez@gmail.com"
-                            value={gmailAddress}
-                            onChange={(e) => setGmailAddress(e.target.value)}
-                            className="w-full pl-10 pr-3.5 py-3 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7545FF]/40 font-medium dark:text-white"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Display Name (Optional)</label>
-                        <div className="relative">
-                          <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            placeholder="e.g. Holdstone Z."
-                            value={gmailName}
-                            onChange={(e) => setGmailName(e.target.value)}
-                            className="w-full pl-10 pr-3.5 py-3 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7545FF]/40 font-medium dark:text-white"
-                          />
-                        </div>
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#7545FF] via-indigo-600 to-[#FF7043] hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-[#7545FF]/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                      >
-                        {isLoading ? (
-                          <span>Connecting with Google...</span>
-                        ) : (
-                          <>
-                            <Sparkles className="w-4 h-4" />
-                            <span>Continue with Google / Gmail</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </button>
-                    </form>
+                    <button
+                      type="button"
+                      onClick={(event) => { void handleGmailSignIn(event); }}
+                      disabled={isLoading}
+                      className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#7545FF] via-indigo-600 to-[#FF7043] hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-[#7545FF]/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    >
+                      {isLoading ? 'Opening Google sign-in...' : 'Continue with Google'}
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
 
