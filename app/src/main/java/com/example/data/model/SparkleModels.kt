@@ -156,6 +156,7 @@ data class Conversation(
     val lastMessageTime: String,
     val unreadCount: Int = 0,
     val isOnline: Boolean = false,
+    val isTyping: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
 )
 

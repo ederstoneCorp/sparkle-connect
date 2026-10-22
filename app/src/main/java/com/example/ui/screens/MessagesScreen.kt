@@ -226,6 +226,13 @@ fun ChatThreadView(
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
+    // Auto-scroll to latest message whenever a new message is sent or received
+    LaunchedEffect(conversation.messages.size) {
+        if (conversation.messages.isNotEmpty()) {
+            listState.animateScrollToItem(conversation.messages.size - 1)
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -273,12 +280,36 @@ fun ChatThreadView(
                         text = conversation.participantName,
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                     )
-                    Text(
-                        text = "${conversation.participantUniversity} • ${if (conversation.isOnline) "Active now" else "Offline"}",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = if (conversation.isOnline) SparkleMint else MaterialTheme.colorScheme.onSurfaceVariant
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = conversation.participantUniversity,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
-                    )
+                        Text(
+                            text = " • ",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                        if (conversation.isTyping) {
+                            Text(
+                                text = "typing...",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = SparkleOrange,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        } else {
+                            Text(
+                                text = if (conversation.isOnline) "Active now" else "Offline",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = if (conversation.isOnline) SparkleMint else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -295,6 +326,12 @@ fun ChatThreadView(
         ) {
             items(conversation.messages, key = { it.id }) { msg ->
                 ChatBubble(message = msg)
+            }
+
+            if (conversation.isTyping) {
+                item(key = "typing_indicator") {
+                    TypingBubble(participantName = conversation.participantName)
+                }
             }
         }
 
@@ -354,38 +391,77 @@ fun ChatThreadView(
 @Composable
 fun ChatBubble(message: ChatMessage) {
     val isMe = message.isFromMe
+    val bubbleShape = RoundedCornerShape(
+        topStart = 16.dp,
+        topEnd = 16.dp,
+        bottomStart = if (isMe) 16.dp else 4.dp,
+        bottomEnd = if (isMe) 4.dp else 16.dp
+    )
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
         horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
+    ) {
+        Surface(
+            shape = bubbleShape,
+            color = if (isMe) Color(0xFF6C3BFF) else Color(0xFFFFFFFF),
+            shadowElevation = 2.dp,
+            modifier = Modifier.widthIn(max = 280.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) {
+                Text(
+                    text = message.text,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = if (isMe) Color.White else Color(0xFF1C1B1F),
+                        lineHeight = 20.sp
+                    )
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = message.timestamp,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = if (isMe) Color.White.copy(alpha = 0.75f) else Color(0xFF757575),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    modifier = Modifier.align(Alignment.End)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TypingBubble(participantName: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.Start
     ) {
         Surface(
             shape = RoundedCornerShape(
                 topStart = 16.dp,
                 topEnd = 16.dp,
-                bottomStart = if (isMe) 16.dp else 4.dp,
-                bottomEnd = if (isMe) 4.dp else 16.dp
+                bottomStart = 4.dp,
+                bottomEnd = 16.dp
             ),
-            color = if (isMe) SparklePurple else MaterialTheme.colorScheme.surface,
-            tonalElevation = if (isMe) 0.dp else 1.dp,
-            modifier = Modifier.widthIn(max = 280.dp)
+            color = Color(0xFFFFFFFF),
+            shadowElevation = 2.dp
         ) {
-            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = message.text,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface,
-                        lineHeight = 20.sp
+                    text = "$participantName is typing...",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        color = SparkleOrange,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp
                     )
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = message.timestamp,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = if (isMe) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 10.sp
-                    ),
-                    modifier = Modifier.align(Alignment.End)
                 )
             }
         }

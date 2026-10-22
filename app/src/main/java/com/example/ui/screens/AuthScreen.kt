@@ -64,6 +64,7 @@ fun AuthScreen(
     modifier: Modifier = Modifier
 ) {
     var isSignUpTab by remember { mutableStateOf(false) }
+    var isSubmitting by remember { mutableStateOf(false) }
 
     // Sign In form fields
     var loginIdentifier by remember { mutableStateOf("") }
@@ -425,8 +426,10 @@ fun AuthScreen(
                                         loginError = "Please enter your email, username, or Gmail"
                                         return@Button
                                     }
+                                    isSubmitting = true
                                     if (loginIdentifier.trim().lowercase().endsWith("@gmail.com") && loginPassword.isBlank()) {
                                         val result = onGoogleSignIn(loginIdentifier.trim())
+                                        isSubmitting = false
                                         if (result.isFailure) {
                                             loginError = result.exceptionOrNull()?.message ?: "Gmail sign-in failed"
                                         }
@@ -434,24 +437,42 @@ fun AuthScreen(
                                     }
                                     if (loginPassword.isBlank()) {
                                         loginError = "Please enter your password (or tap 'Log in using Gmail' above)"
+                                        isSubmitting = false
                                         return@Button
                                     }
                                     val result = onSignIn(loginIdentifier, loginPassword)
+                                    isSubmitting = false
                                     if (result.isFailure) {
                                         loginError = result.exceptionOrNull()?.message ?: "Sign-in failed"
                                     }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = SparklePurple),
+                                enabled = !isSubmitting,
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(50.dp)
                                     .testTag("submit_login_button")
                             ) {
-                                Text(
-                                    text = "Sign In to Sparkle Connect",
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-                                )
+                                if (isSubmitting) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Signing In...",
+                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = "Sign In to Sparkle Connect",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                }
                             }
                         }
                     }

@@ -31,6 +31,14 @@ data class SparkleUiState(
     val selectedGigForApply: Gig? = null,
     val activeConversation: Conversation? = null,
     val snackbarMessage: String? = null,
+    val visiblePostLimit: Int = 3,
+    val isLoadingMorePosts: Boolean = false,
+    val isTabContentLoading: Boolean = false,
+    val isAiSearchActive: Boolean = false,
+    val aiSearchQuery: String = "",
+    val isAiSearchLoading: Boolean = false,
+    val aiSearchResult: com.example.data.api.CampusSearchResult? = null,
+    val aiSearchError: String? = null
 )
 
 class SparkleViewModel(
@@ -89,11 +97,16 @@ class SparkleViewModel(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun selectTab(tab: SparkleTab) {
-        _uiState.update { it.copy(selectedTab = tab, activeConversation = null) }
+        if (_uiState.value.selectedTab == tab) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(selectedTab = tab, activeConversation = null, isTabContentLoading = true) }
+            kotlinx.coroutines.delay(350)
+            _uiState.update { it.copy(isTabContentLoading = false) }
+        }
     }
 
     fun setCategory(category: PostCategory) {
-        _uiState.update { it.copy(selectedCategory = category) }
+        _uiState.update { it.copy(selectedCategory = category, visiblePostLimit = 3) }
     }
 
     fun setGigCategory(category: String) {
@@ -101,15 +114,69 @@ class SparkleViewModel(
     }
 
     fun setUniversityFilter(uniShortName: String?) {
-        _uiState.update { it.copy(selectedUniversityFilter = uniShortName) }
+        _uiState.update { it.copy(selectedUniversityFilter = uniShortName, visiblePostLimit = 3) }
     }
 
     fun setSearchQuery(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
+        _uiState.update { it.copy(searchQuery = query, visiblePostLimit = 3) }
+    }
+
+    fun loadMorePosts() {
+        if (_uiState.value.isLoadingMorePosts) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingMorePosts = true) }
+            kotlinx.coroutines.delay(800) // Simulate paginated network/DB load delay
+            _uiState.update { current ->
+                current.copy(
+                    visiblePostLimit = current.visiblePostLimit + 3,
+                    isLoadingMorePosts = false
+                )
+            }
+        }
     }
 
     fun toggleSearch() {
         _uiState.update { it.copy(isSearchActive = !it.isSearchActive, searchQuery = "") }
+    }
+
+    fun toggleAiSearch(active: Boolean = true) {
+        _uiState.update { it.copy(isAiSearchActive = active) }
+    }
+
+    fun setAiSearchQuery(query: String) {
+        _uiState.update { it.copy(aiSearchQuery = query) }
+    }
+
+    fun performCampusAiSearch(queryOverride: String? = null) {
+        val q = (queryOverride ?: _uiState.value.aiSearchQuery).ifBlank { _uiState.value.searchQuery }
+        if (q.isBlank()) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isAiSearchActive = true,
+                    isAiSearchLoading = true,
+                    aiSearchError = null,
+                    aiSearchQuery = q
+                )
+            }
+            val result = com.example.data.api.GeminiSearchService.searchCampusGroundedInfo(q)
+            if (result.isSuccess) {
+                _uiState.update {
+                    it.copy(
+                        isAiSearchLoading = false,
+                        aiSearchResult = result.getOrNull(),
+                        aiSearchError = null
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isAiSearchLoading = false,
+                        aiSearchError = result.exceptionOrNull()?.message ?: "Grounded search failed."
+                    )
+                }
+            }
+        }
     }
 
     fun showCreatePost(show: Boolean) {
@@ -191,6 +258,14 @@ class SparkleViewModel(
 
     fun toggleEventRegistration(eventId: String) {
         repository.toggleEventRegistration(eventId)
+    }
+
+    fun setTypingStatus(conversationId: String, isTyping: Boolean) {
+        repository.setTypingStatus(conversationId, isTyping)
+        val updated = repository.conversations.value.find { it.id == conversationId }
+        if (updated != null && _uiState.value.activeConversation?.id == conversationId) {
+            _uiState.update { it.copy(activeConversation = updated) }
+        }
     }
 
     fun sendMessage(conversationId: String, text: String) {

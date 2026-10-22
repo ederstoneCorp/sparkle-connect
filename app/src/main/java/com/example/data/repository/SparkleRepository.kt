@@ -222,12 +222,12 @@ class SparkleRepository(
                 authorAvatar = "GK",
                 authorUniversity = "JKUAT",
                 authorCourse = "Mechatronics Engineering",
-                content = "We have open slots for 2 student hardware enthusiasts in the Juja Robotics Club. We're assembling an autonomous agriculture rover for the National Innovation Week. Check the Communities tab to join us!",
+                content = "We have open slots for 2 student hardware enthusiasts in the Juja Robotics Club. We're assembling an autonomous agriculture rover for National Innovation Week. Check the Communities tab to join us!",
                 category = PostCategory.OPPORTUNITIES,
                 likesCount = 64,
                 commentsCount = 8,
                 isLikedByMe = false,
-                timeAgo = "2h ago",
+                timeAgo = "2h ago"
             ),
             CampusPost(
                 authorId = "student_mercy",
@@ -239,7 +239,79 @@ class SparkleRepository(
                 category = PostCategory.CAREER,
                 likesCount = 19,
                 commentsCount = 3,
-                timeAgo = "3h ago",
+                timeAgo = "3h ago"
+            ),
+            CampusPost(
+                authorId = "student_brian",
+                authorName = "Brian Kiprop",
+                authorAvatar = "BK",
+                authorUniversity = "Moi University",
+                authorCourse = "Software Engineering",
+                content = "Just released a Kotlin Multiplatform starter template configured for Kenyan developer students! Includes Room SQLite, Ktor, and M-Pesa sandbox helpers. Free on GitHub! 🚀📱",
+                category = PostCategory.TECH,
+                likesCount = 53,
+                commentsCount = 9,
+                timeAgo = "4h ago"
+            ),
+            CampusPost(
+                authorId = "student_cynthia",
+                authorName = "Cynthia Akoth",
+                authorAvatar = "CA",
+                authorUniversity = "Kenyatta University",
+                authorCourse = "Sports Science",
+                content = "Who else is attending the Inter-University Games this Friday at Kenyatta University grounds? The UoN vs KU basketball derby is going to be epic! 🏀🔥",
+                category = PostCategory.CAMPUS_LIFE,
+                likesCount = 37,
+                commentsCount = 5,
+                timeAgo = "5h ago"
+            ),
+            CampusPost(
+                authorId = "student_samuel",
+                authorName = "Samuel Njoroge",
+                authorAvatar = "SN",
+                authorUniversity = "Egerton University",
+                authorCourse = "Agribusiness Management",
+                content = "Equity Leaders Program is hosting a virtual mentorship workshop on CV writing and tech interview prep for 3rd and 4th year students tomorrow at 4 PM. DM me for the Zoom link!",
+                category = PostCategory.OPPORTUNITIES,
+                likesCount = 31,
+                commentsCount = 2,
+                timeAgo = "6h ago"
+            ),
+            CampusPost(
+                authorId = "anonymous2",
+                authorName = "Anonymous Student",
+                authorAvatar = "🔒",
+                authorUniversity = "Strathmore University",
+                content = "How do you guys handle burnout during 2nd year semester 1? Balancing coursework, freelance gigs, and exam prep feels intense right now. Any advice?",
+                category = PostCategory.ANONYMOUS,
+                isAnonymous = true,
+                likesCount = 45,
+                commentsCount = 12,
+                timeAgo = "8h ago"
+            ),
+            CampusPost(
+                authorId = "student_joy",
+                authorName = "Joy Wambui",
+                authorAvatar = "JW",
+                authorUniversity = "USIU-Africa",
+                authorCourse = "International Relations",
+                content = "Sparkle Connect Annual Campus Tech & Innovation Gala is happening next month at Strathmore Auditorium. Free delegate passes available for verified students! 🎟️✨",
+                category = PostCategory.CAMPUS_LIFE,
+                likesCount = 88,
+                commentsCount = 14,
+                timeAgo = "12h ago"
+            ),
+            CampusPost(
+                authorId = "student_david",
+                authorName = "David Otieno",
+                authorAvatar = "DO",
+                authorUniversity = "Technical University of Kenya",
+                authorCourse = "Electrical & Electronic Eng",
+                content = "Safaricom Spark Accelerator is officially accepting applications for student-founded startups. Up to KES 500,000 equity-free seed funding for top 3 pitch finalists! 💡🇰🇪",
+                category = PostCategory.CAREER,
+                likesCount = 76,
+                commentsCount = 11,
+                timeAgo = "1d ago"
             )
         )
 
@@ -596,6 +668,14 @@ class SparkleRepository(
     }
 
     // Message Operations
+    fun setTypingStatus(conversationId: String, isTyping: Boolean) {
+        _conversations.value = _conversations.value.map { conv ->
+            if (conv.id == conversationId) {
+                conv.copy(isTyping = isTyping)
+            } else conv
+        }
+    }
+
     fun sendMessage(conversationId: String, text: String) {
         val user = _currentUser.value ?: return
         _conversations.value = _conversations.value.map { conv ->
@@ -610,6 +690,7 @@ class SparkleRepository(
                 conv.copy(
                     lastMessage = text,
                     lastMessageTime = "Just now",
+                    isTyping = false,
                     messages = conv.messages + newMsg
                 )
             } else conv

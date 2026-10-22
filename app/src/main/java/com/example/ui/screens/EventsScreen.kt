@@ -24,6 +24,7 @@ import com.example.ui.theme.*
 fun EventsScreen(
     events: List<CampusEvent>,
     onToggleRegistration: (String) -> Unit,
+    isLoading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -60,11 +61,17 @@ fun EventsScreen(
             }
         }
 
-        items(events, key = { it.id }) { event ->
-            EventCard(
-                event = event,
-                onToggleRegistration = { onToggleRegistration(event.id) }
-            )
+        if (isLoading) {
+            items(3) {
+                com.example.ui.components.GigShimmerItem()
+            }
+        } else {
+            items(events, key = { it.id }) { event ->
+                EventCard(
+                    event = event,
+                    onToggleRegistration = { onToggleRegistration(event.id) }
+                )
+            }
         }
     }
 }

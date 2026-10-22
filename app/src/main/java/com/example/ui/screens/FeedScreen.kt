@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,8 +37,14 @@ fun FeedScreen(
     onLikePost: (String) -> Unit,
     onAddComment: (String, String) -> Unit,
     onCreatePostClick: () -> Unit,
+    visiblePostLimit: Int = 3,
+    isLoadingMore: Boolean = false,
+    onLoadMorePosts: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val displayedPosts = posts.take(visiblePostLimit)
+    val hasMorePosts = posts.size > visiblePostLimit
+
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
@@ -77,47 +84,223 @@ fun FeedScreen(
                 }
             }
 
-            // Quick Create Post Banner
+            // Campus Highlights / Stories Row (Facebook style)
+            item {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Campus Highlights",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(horizontal = 2.dp)
+                    ) {
+                        // Create Story Card
+                        item {
+                            Card(
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = BorderStroke(1.dp, SparkleBorder.copy(alpha = 0.6f)),
+                                modifier = Modifier
+                                    .width(100.dp)
+                                    .height(130.dp)
+                                    .clickable { onCreatePostClick() }
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(SparklePurple),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Add Story",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        // Sample Campus Highlight Cards
+                        val campusStories = listOf(
+                            "UoN Gala" to "UoN Chiromo",
+                            "KU Hackathon" to "KU Kahawa",
+                            "Strathmore" to "Strathmore",
+                            "JKUAT Tech" to "JKUAT Juja"
+                        )
+                        items(campusStories) { (title, campus) ->
+                            Card(
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                                border = BorderStroke(1.dp, SparkleBorder.copy(alpha = 0.4f)),
+                                modifier = Modifier
+                                    .width(100.dp)
+                                    .height(130.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(8.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(SparklePrimaryGradient),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = title.take(1),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        )
+                                    }
+                                    Column {
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp
+                                            ),
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = campus,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = SparklePurple,
+                                                fontSize = 9.sp
+                                            ),
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Category Filter Pills
+            item {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                    modifier = Modifier.testTag("feed_category_row")
+                ) {
+                    items(PostCategory.values()) { category ->
+                        val isSelected = category == selectedCategory
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { onSelectCategory(category) },
+                            label = {
+                                Text(
+                                    text = category.displayName,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = SparklePurple,
+                                selectedLabelColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.testTag("filter_chip_${category.name.lowercase()}")
+                        )
+                    }
+                }
+            }
+
+            // Facebook-Style Composer Card ("What's on your mind?")
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, SparkleBorder.copy(alpha = 0.5f)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onCreatePostClick() }
                         .testTag("quick_post_banner")
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(SparklePrimaryGradient),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .clickable { onCreatePostClick() },
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(SparklePrimaryGradient),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Surface(
+                                shape = RoundedCornerShape(24.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "What's on your mind? Share an update...",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "What's happening on your campus?",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            )
-                            Text(
-                                text = "Share ideas, ask questions, or post anonymously 🔒",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = SparklePurple,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        HorizontalDivider(color = SparkleBorder.copy(alpha = 0.4f))
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier.clickable { onCreatePostClick() },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Image, contentDescription = null, tint = SparklePurple, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Photo/Media", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
+                            }
+                            Row(
+                                modifier = Modifier.clickable { onCreatePostClick() },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = SparklePink, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Secret Post 🔒", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
+                            }
+                            Row(
+                                modifier = Modifier.clickable { onCreatePostClick() },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Work, contentDescription = null, tint = SparkleOrange, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Gig Offer", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
+                            }
                         }
                     }
                 }
@@ -169,12 +352,100 @@ fun FeedScreen(
                     }
                 }
             } else {
-                items(posts, key = { it.id }) { post ->
+                items(displayedPosts, key = { it.id }) { post ->
                     CampusPostCard(
                         post = post,
                         onLikeClick = { onLikePost(post.id) },
                         onCommentSubmit = { text -> onAddComment(post.id, text) }
                     )
+                }
+
+                if (isLoadingMore) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            com.example.ui.components.SkeletonShimmerCard()
+                            com.example.ui.components.SkeletonShimmerCard()
+                        }
+                    }
+                } else if (hasMorePosts) {
+                    item {
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = BorderStroke(1.dp, SparklePurple.copy(alpha = 0.35f)),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp)
+                                .testTag("load_more_posts_card")
+                        ) {
+                            Button(
+                                onClick = onLoadMorePosts,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = SparklePurple,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                                    .height(48.dp)
+                                    .testTag("load_more_posts_button")
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ExpandMore,
+                                        contentDescription = "Load More Posts",
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Load More Campus Posts (${posts.size - visiblePostLimit} remaining)",
+                                        style = MaterialTheme.typography.labelLarge.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else if (posts.isNotEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                border = BorderStroke(1.dp, SparkleBorder.copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "🎉 You're all caught up! No more posts.",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

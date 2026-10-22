@@ -33,6 +33,7 @@ fun GigsScreen(
     onBookmarkToggle: (String) -> Unit,
     onApplyClick: (Gig) -> Unit,
     onCreateGigClick: () -> Unit,
+    isLoading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val categories = listOf("All", "Mobile & App", "Design", "Tutoring", "Event", "Writing")
@@ -120,7 +121,11 @@ fun GigsScreen(
             }
 
             // Gigs List
-            if (gigs.isEmpty()) {
+            if (isLoading) {
+                items(3) {
+                    com.example.ui.components.GigShimmerItem()
+                }
+            } else if (gigs.isEmpty()) {
                 item {
                     Card(
                         shape = RoundedCornerShape(16.dp),
