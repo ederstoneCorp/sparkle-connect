@@ -929,7 +929,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         authorName: isAnonymous ? 'Anonymous Comrade' : author.displayName,
         authorAvatar: isAnonymous ? 'https://api.dicebear.com/7.x/bottts/svg?seed=anon' : author.avatarUrl,
         authorUniversity: isAnonymous ? 'Campus' : author.university.shortName,
-        content: cleanContent, timeAgo: 'Just now', isAnonymous,
+        content: cleanContent, timeAgo: 'Just now', createdAtTimestamp: Date.now(), isAnonymous,
       };
       setState((prev) => ({ ...prev, posts: prev.posts.map((post) => post.id === postId ? {
         ...post, commentsCount: post.commentsCount + 1, comments: [...post.comments, newComment],
@@ -953,7 +953,8 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         authorAvatar: isAnonymous ? 'https://api.dicebear.com/7.x/bottts/svg?seed=anon' : author.avatarUrl,
         authorUniversity: isAnonymous ? 'Campus' : author.university.shortName,
         content: cleanContent,
-        timeAgo: 'Just now',
+        timeAgo: formatTimeAgo(data.created_at),
+        createdAtTimestamp: data.created_at ? Date.parse(data.created_at) : Date.now(),
         isAnonymous,
       };
       setState((prev) => ({
