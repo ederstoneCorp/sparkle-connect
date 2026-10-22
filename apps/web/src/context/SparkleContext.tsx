@@ -52,6 +52,7 @@ interface SparkleContextType extends SparkleState {
   setIsNotificationsOpen: (open: boolean) => void;
   signIn: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   signInWithGmail: (googleEmail: string, derivedName?: string) => Promise<{ success: boolean; account?: RegisteredAccount; error?: string }>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (data: {
     email: string;
     password?: string;
@@ -62,7 +63,7 @@ interface SparkleContextType extends SparkleState {
     yearOfStudy: number;
     skills: string[];
     interests: string[];
-  }) => Promise<{ success: boolean; error?: string }>;
+  }) => Promise<{ success: boolean; error?: string; confirmationRequired?: boolean }>;
   signOut: () => void;
   switchAccount: (accountId: string) => void;
   updateAvatar: (newAvatarUrl: string) => void;
@@ -106,9 +107,9 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
-          accounts: parsed.accounts || INITIAL_ACCOUNTS,
-          currentUser: parsed.currentUser || null,
-          currentAccountId: parsed.currentAccountId || null,
+          accounts: [],
+          currentUser: null,
+          currentAccountId: null,
           posts: parsed.posts || INITIAL_POSTS,
           gigs: parsed.gigs || INITIAL_GIGS,
           communities: parsed.communities || INITIAL_COMMUNITIES,
@@ -117,7 +118,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           notifications: parsed.notifications || INITIAL_NOTIFICATIONS,
           selectedUniversityId: 'ALL',
           activeTab: 'feed',
-          isAuthModalOpen: !parsed.currentUser,
+          isAuthModalOpen: true,
           isProfileModalOpen: false,
           isNotificationsOpen: false,
         };
@@ -127,7 +128,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     return {
-      accounts: INITIAL_ACCOUNTS,
+      accounts: [],
       currentUser: null,
       currentAccountId: null,
       posts: INITIAL_POSTS,
@@ -148,9 +149,6 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     try {
       const dataToSave = {
-        accounts: state.accounts,
-        currentUser: state.currentUser,
-        currentAccountId: state.currentAccountId,
         posts: state.posts,
         gigs: state.gigs,
         communities: state.communities,
@@ -178,44 +176,30 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setState((prev) => ({ ...prev, selectedUniversityId: id }));
   };
 
-  // Supabase session persistence across devices
+  // Restore the authenticated Supabase session and hydrate the matching cloud profile.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const email = session.user.email || '';
-        const existing = state.accounts.find(
-          (acc) => acc.email.toLowerCase() === email.toLowerCase()
-        );
-        if (existing) {
-          setState((prev) => ({
-            ...prev,
-            currentUser: existing.profile,
-            currentAccountId: existing.id,
-            isAuthModalOpen: false,
-          }));
-        }
+    let active = true;
+    const hydrate = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string } | null) => {
+      if (!user) {
+        if (active) setState((prev) => ({ ...prev, currentUser: null, currentAccountId: null, isAuthModalOpen: true }));
+        return;
       }
-    }).catch(() => {});
+      try {
+        const profile = await ensureProfile(user);
+        if (active) setState((prev) => ({ ...prev, currentUser: profile, currentAccountId: user.id, isAuthModalOpen: false }));
+      } catch (error) {
+        console.error('Could not restore Sparkle profile:', error);
+        if (active) setState((prev) => ({ ...prev, currentUser: null, currentAccountId: null, isAuthModalOpen: true }));
+      }
+    };
 
+    void supabase.auth.getSession().then(({ data: { session } }) => hydrate(session?.user || null));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const email = session.user.email || '';
-        const existing = state.accounts.find(
-          (acc) => acc.email.toLowerCase() === email.toLowerCase()
-        );
-        if (existing) {
-          setState((prev) => ({
-            ...prev,
-            currentUser: existing.profile,
-            currentAccountId: existing.id,
-            isAuthModalOpen: false,
-          }));
-        }
-      }
+      void hydrate(session?.user || null);
     });
-
     return () => {
-      subscription?.unsubscribe();
+      active = false;
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -308,107 +292,95 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setState((prev) => ({ ...prev, isNotificationsOpen: open }));
   };
 
-  // Sign In using email/password
+  const profileFromUser = (user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string }): StudentProfile => {
+    const metadata = user.user_metadata || {};
+    const university = UNIVERSITIES.find((item) => item.id === String(metadata.universityId || '')) || UNIVERSITIES[0];
+    const displayName = String(metadata.display_name || metadata.full_name || user.email?.split('@')[0] || 'Student');
+    const username = String(metadata.username || (user.email || 'student').split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_'));
+    return {
+      id: user.id,
+      username,
+      displayName,
+      email: user.email || '',
+      avatarUrl: String(metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(displayName)}`),
+      bio: String(metadata.bio || `Student at ${university.shortName}`),
+      university,
+      faculty: String(metadata.faculty || 'Not specified'),
+      course: String(metadata.course || 'Not specified'),
+      yearOfStudy: Number(metadata.year_of_study || 1),
+      isVerifiedStudent: Boolean(user.email),
+      skills: Array.isArray(metadata.skills) ? metadata.skills as string[] : ['Campus Networking'],
+      interests: Array.isArray(metadata.interests) ? metadata.interests as string[] : ['Campus Life'],
+      joinedDate: new Date(user.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    };
+  };
+
+  const ensureProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string }) => {
+    const mapped = profileFromUser(user);
+    const { data: existingProfile, error: readError } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url, bio, faculty, course, year_of_study, is_verified_student, created_at')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (readError) throw readError;
+
+    if (!existingProfile) {
+      const baseUsername = mapped.username.slice(0, 40) || 'student';
+      const profilePayload = {
+        id: user.id,
+        username: `${baseUsername}_${user.id.replace(/-/g, '').slice(0, 6)}`,
+        display_name: mapped.displayName,
+        avatar_url: mapped.avatarUrl,
+        bio: mapped.bio,
+        faculty: mapped.faculty,
+        course: mapped.course,
+        year_of_study: mapped.yearOfStudy,
+        is_verified_student: false,
+      };
+      const { error } = await supabase.from('profiles').insert(profilePayload);
+      if (error) throw error;
+      return mapped;
+    }
+
+    return {
+      ...mapped,
+      username: existingProfile.username || mapped.username,
+      displayName: existingProfile.display_name || mapped.displayName,
+      avatarUrl: existingProfile.avatar_url || mapped.avatarUrl,
+      bio: existingProfile.bio || mapped.bio,
+      faculty: existingProfile.faculty || mapped.faculty,
+      course: existingProfile.course || mapped.course,
+      yearOfStudy: existingProfile.year_of_study || mapped.yearOfStudy,
+      isVerifiedStudent: Boolean(existingProfile.is_verified_student),
+      joinedDate: new Date(existingProfile.created_at || user.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    } as StudentProfile;
+  };
+
   const signIn = async (email: string, password?: string) => {
-    const cleanEmail = email.trim().toLowerCase();
-    const existing = state.accounts.find(
-      (acc) => acc.email.toLowerCase() === cleanEmail || acc.googleEmail?.toLowerCase() === cleanEmail
-    );
-
-    if (!existing) {
-      return { success: false, error: 'No account found with this email. Please create an account or use Gmail login.' };
+    if (!password) return { success: false, error: 'Enter your password to sign in.' };
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+    if (error || !data.user) return { success: false, error: error?.message || 'Unable to sign in.' };
+    try {
+      const profile = await ensureProfile(data.user);
+      setState((prev) => ({ ...prev, currentUser: profile, currentAccountId: data.user.id, isAuthModalOpen: false }));
+      return { success: true };
+    } catch (profileError) {
+      await supabase.auth.signOut();
+      return { success: false, error: profileError instanceof Error ? profileError.message : 'Could not load your profile.' };
     }
+  };
 
-    if (password && existing.password && existing.password !== password) {
-      return { success: false, error: 'Incorrect password. Try logging in with Gmail or reset password.' };
-    }
-
-    setState((prev) => ({
-      ...prev,
-      currentUser: existing.profile,
-      currentAccountId: existing.id,
-      isAuthModalOpen: false,
-    }));
-
+  // A typed Gmail address is not Google authentication. Use the configured OAuth flow.
+  const signInWithGmail = async (_googleEmail: string, _derivedName?: string) => {
+    const redirectTo = window.location.origin;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    });
+    if (error) return { success: false, error: error.message };
     return { success: true };
   };
 
-  // Sign In with Gmail (Exact parity with mobile logic: auto-derives name, generates password, saves to DB without requiring user to create password)
-  const signInWithGmail = async (googleEmail: string, derivedName?: string) => {
-    const cleanEmail = googleEmail.trim().toLowerCase();
-    if (!cleanEmail.endsWith('@gmail.com') && !cleanEmail.includes('@')) {
-      return { success: false, error: 'Please enter a valid Gmail address (e.g., student@gmail.com).' };
-    }
-
-    // Look for existing account
-    const existing = state.accounts.find(
-      (acc) => acc.email.toLowerCase() === cleanEmail || acc.googleEmail?.toLowerCase() === cleanEmail
-    );
-
-    if (existing) {
-      setState((prev) => ({
-        ...prev,
-        currentUser: existing.profile,
-        currentAccountId: existing.id,
-        isAuthModalOpen: false,
-      }));
-      return { success: true, account: existing };
-    }
-
-    // Derive name from email if not provided (e.g. holdstonez -> Holdstone Z)
-    const emailPrefix = cleanEmail.split('@')[0];
-    const computedName =
-      derivedName && derivedName.trim().length > 0
-        ? derivedName.trim()
-        : emailPrefix
-            .replace(/[._-]/g, ' ')
-            .split(' ')
-            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-            .join(' ');
-
-    const newId = `user_${Date.now()}`;
-    const defaultUniversity = UNIVERSITIES[0]; // University of Nairobi default
-
-    const newProfile: StudentProfile = {
-      id: newId,
-      username: emailPrefix.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-      displayName: computedName,
-      email: cleanEmail,
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(computedName)}`,
-      bio: `Student at ${defaultUniversity.shortName} • Joined via Google 🇰🇪`,
-      university: defaultUniversity,
-      faculty: 'Faculty of Science & Technology',
-      course: 'BSc Computer Science',
-      yearOfStudy: 2,
-      isVerifiedStudent: true,
-      skills: ['Campus Collaboration', 'Research', 'Tech'],
-      interests: ['Tech & Coding', 'Campus Entrepreneurship'],
-      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-    };
-
-    const newAccount: RegisteredAccount = {
-      id: newId,
-      email: cleanEmail,
-      password: `sparkle_pwd_${Math.random().toString(36).substring(2, 10)}`, // Auto-generated secure password
-      profile: newProfile,
-      authProvider: 'GOOGLE',
-      googleEmail: cleanEmail,
-      socialHandle: `@${newProfile.username}`,
-      isRecordedInDatabase: true, // Marked as saved in database
-    };
-
-    setState((prev) => ({
-      ...prev,
-      accounts: [newAccount, ...prev.accounts],
-      currentUser: newProfile,
-      currentAccountId: newId,
-      isAuthModalOpen: false,
-    }));
-
-    return { success: true, account: newAccount };
-  };
-
-  // Sign Up standard
   const signUp = async (data: {
     email: string;
     password?: string;
@@ -420,51 +392,52 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     skills: string[];
     interests: string[];
   }) => {
-    const cleanEmail = data.email.trim().toLowerCase();
-    const existing = state.accounts.find((acc) => acc.email.toLowerCase() === cleanEmail);
-    if (existing) {
-      return { success: false, error: 'An account with this email already exists. Please sign in instead.' };
+    if (!data.password || data.password.length < 8) {
+      return { success: false, error: 'Use a password with at least 8 characters.' };
     }
-
+    const cleanEmail = data.email.trim().toLowerCase();
     const univ = UNIVERSITIES.find((u) => u.id === data.universityId) || UNIVERSITIES[0];
-    const newId = `user_${Date.now()}`;
-    const username = cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '_');
-
-    const newProfile: StudentProfile = {
-      id: newId,
-      username,
-      displayName: data.displayName.trim(),
+    const username = cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 40) || 'student';
+    const { data: result, error } = await supabase.auth.signUp({
       email: cleanEmail,
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.displayName)}`,
-      bio: `Student at ${univ.shortName} • ${data.course}`,
-      university: univ,
-      faculty: data.faculty,
-      course: data.course,
-      yearOfStudy: data.yearOfStudy,
-      isVerifiedStudent: true,
-      skills: data.skills.length > 0 ? data.skills : ['Student', 'Campus Networking'],
-      interests: data.interests.length > 0 ? data.interests : ['Campus Life'],
-      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-    };
+      password: data.password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          display_name: data.displayName.trim(),
+          username,
+          universityId: univ.id,
+          faculty: data.faculty,
+          course: data.course,
+          year_of_study: data.yearOfStudy,
+          skills: data.skills,
+          interests: data.interests,
+        },
+      },
+    });
+    if (error) return { success: false, error: error.message };
+    if (!result.user) return { success: false, error: 'Account creation could not be confirmed. Please try again.' };
+    const createdUser = result.user;
 
-    const newAccount: RegisteredAccount = {
-      id: newId,
-      email: cleanEmail,
-      password: data.password || `pwd_${Math.random().toString(36).substring(2, 8)}`,
-      profile: newProfile,
-      authProvider: 'EMAIL',
-      socialHandle: `@${username}`,
-      isRecordedInDatabase: true,
-    };
+    if (result.session) {
+      try {
+        const profile = await ensureProfile(createdUser);
+        setState((prev) => ({ ...prev, currentUser: profile, currentAccountId: createdUser.id, isAuthModalOpen: false }));
+      } catch (profileError) {
+        return { success: false, error: profileError instanceof Error ? profileError.message : 'Account created, but profile setup failed.' };
+      }
+      return { success: true };
+    }
+    return { success: true, confirmationRequired: true };
+  };
 
-    setState((prev) => ({
-      ...prev,
-      accounts: [newAccount, ...prev.accounts],
-      currentUser: newProfile,
-      currentAccountId: newId,
-      isAuthModalOpen: false,
-    }));
-
+  const resetPassword = async (email: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return { success: false, error: 'Enter the email address for your account.' };
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: window.location.origin,
+    });
+    if (error) return { success: false, error: error.message };
     return { success: true };
   };
 
@@ -864,6 +837,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsNotificationsOpen,
         signIn,
         signInWithGmail,
+        resetPassword,
         signUp,
         signOut,
         switchAccount,
