@@ -11,6 +11,8 @@ import {
   Mail,
   Camera,
   Edit3,
+  Lock,
+  Globe,
 } from 'lucide-react';
 import { AvatarEditModal } from './AvatarEditModal';
 import { CourseSearchModal } from './CourseSearchModal';
@@ -23,6 +25,7 @@ export const ProfileModal: React.FC = () => {
     signOut,
     updateCourse,
     updateProfile,
+    toggleProfilePrivacy,
   } = useSparkle();
 
   const [isAvatarEditOpen, setIsAvatarEditOpen] = useState(false);
@@ -33,6 +36,8 @@ export const ProfileModal: React.FC = () => {
   const [editYear, setEditYear] = useState(1);
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [privacyError, setPrivacyError] = useState<string | null>(null);
+  const [isChangingPrivacy, setIsChangingPrivacy] = useState(false);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -40,6 +45,14 @@ export const ProfileModal: React.FC = () => {
     setEditFaculty(currentUser.faculty);
     setEditYear(currentUser.yearOfStudy);
   }, [currentUser]);
+
+  const handleTogglePrivacy = async () => {
+    setPrivacyError(null);
+    setIsChangingPrivacy(true);
+    const result = await toggleProfilePrivacy();
+    setIsChangingPrivacy(false);
+    if (!result.success) setPrivacyError(result.error || 'Could not update profile privacy.');
+  };
 
   const handleSaveProfileDetails = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -183,6 +196,23 @@ export const ProfileModal: React.FC = () => {
               <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
               <span>Joined {currentUser.joinedDate}</span>
             </div>
+          </div>
+
+          {/* Profile privacy, matching the native Android profile controls */}
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/50">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="rounded-xl bg-sparkle-purple/10 p-2 text-sparkle-purple">
+                {currentUser.isPrivateAccount ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
+              </span>
+              <div>
+                <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100">{currentUser.isPrivateAccount ? 'Private profile' : 'Public profile'}</p>
+                <p className="mt-1 text-[10px] leading-relaxed text-slate-500 dark:text-slate-400">{currentUser.isPrivateAccount ? 'Only you can view your profile under current privacy rules.' : 'Your profile is discoverable by signed-in students.'}</p>
+                {privacyError && <p role="alert" className="mt-1 text-[10px] font-semibold text-rose-600">{privacyError}</p>}
+              </div>
+            </div>
+            <button type="button" onClick={() => { void handleTogglePrivacy(); }} disabled={isChangingPrivacy} className="shrink-0 rounded-xl border border-sparkle-purple/30 px-3 py-2 text-[10px] font-extrabold text-sparkle-purple hover:bg-sparkle-purple/10 disabled:opacity-50">
+              {isChangingPrivacy ? 'Saving...' : currentUser.isPrivateAccount ? 'Make public' : 'Make private'}
+            </button>
           </div>
 
           {/* Skills & Interests Tags */}
