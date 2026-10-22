@@ -29,10 +29,10 @@ export const EventsScreen: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Header & Search */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-white dark:bg-sparkle-darkSurface rounded-2xl border border-slate-200/80 dark:border-slate-700/60 p-4 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div>
-          <h2 className="text-base font-extrabold text-slate-900">Campus Events & Hackathons</h2>
-          <p className="text-xs text-slate-500">Upcoming tech summits, student competitions, and career fairs in Kenya</p>
+          <h2 className="text-base font-extrabold text-slate-900 dark:text-slate-100">Campus Events & Hackathons</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-400">Upcoming tech summits, student competitions, and career fairs in Kenya</p>
         </div>
 
         <div className="relative w-full sm:w-72">
@@ -42,7 +42,7 @@ export const EventsScreen: React.FC = () => {
             placeholder="Search events, venues, dates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 font-medium"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-sparkle-purple/30 font-medium dark:text-slate-100"
           />
         </div>
       </div>
@@ -52,10 +52,10 @@ export const EventsScreen: React.FC = () => {
         {filteredEvents.map((event) => (
           <div
             key={event.id}
-            className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+            className="bg-white dark:bg-sparkle-darkSurface rounded-2xl border border-slate-200/80 dark:border-slate-700/60 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
           >
             {event.imageUrl && (
-              <div className="h-44 w-full bg-slate-100 overflow-hidden relative">
+              <div className="h-44 w-full bg-slate-100 dark:bg-slate-800 overflow-hidden relative">
                 <img
                   src={event.imageUrl}
                   alt={event.title}
@@ -70,14 +70,14 @@ export const EventsScreen: React.FC = () => {
 
             <div className="p-5 flex-1 flex flex-col justify-between">
               <div>
-                <h3 className="font-extrabold text-base text-slate-900 mb-2 leading-snug">
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 mb-2 leading-snug">
                   {event.title}
                 </h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-normal mb-4">
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-normal mb-4">
                   {event.description}
                 </p>
 
-                <div className="space-y-1.5 text-xs text-slate-600 mb-4">
+                <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 mb-4">
                   <div className="flex items-center gap-2 font-medium">
                     <Calendar className="w-4 h-4 text-sparkle-purple" />
                     <span>{event.date || event.dateString} • {event.time || event.timeString}</span>
@@ -86,14 +86,14 @@ export const EventsScreen: React.FC = () => {
                     <MapPin className="w-4 h-4 text-sparkle-orange" />
                     <span>{event.location || event.venue}</span>
                   </div>
-                  <div className="flex items-center gap-2 font-medium text-slate-500">
+                  <div className="flex items-center gap-2 font-medium text-slate-500 dark:text-slate-400">
                     <Users className="w-4 h-4 text-slate-400" />
                     <span>{(event.attendeesCount ?? event.attendeeCount ?? 0).toLocaleString()} Comrades Attending</span>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
                 <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">
                   Free Student Entry
                 </span>
