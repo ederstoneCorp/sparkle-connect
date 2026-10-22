@@ -595,7 +595,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     void updateProfile({ course: newCourse });
   };
 
-  // Post Actions
+  // Post Actions: write authenticated actions to Supabase; local state mirrors confirmed writes.
   const addPost = (
     content: string,
     category: PostCategory,
@@ -606,135 +606,177 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     visibility: PostVisibility = 'CAMPUS_COMMUNITY',
     commentsDisabled: boolean = false
   ) => {
-    if (!state.currentUser) {
+    const author = state.currentUser;
+    if (!author) {
       setState((prev) => ({ ...prev, isAuthModalOpen: true }));
       return;
     }
-
     const postImages = images && images.length > 0 ? images : mediaUrl ? [mediaUrl] : [];
-
-    const newPost: CampusPost = {
-      id: `post_${Date.now()}`,
-      authorId: isAnonymous ? 'anon' : state.currentUser.id,
-      authorName: isAnonymous ? 'Secret Student' : state.currentUser.displayName,
-      authorAvatar: isAnonymous
-        ? 'https://api.dicebear.com/7.x/bottts/svg?seed=sparkle_anon'
-        : state.currentUser.avatarUrl,
-      authorUniversity: isAnonymous ? 'Kenyan Campus' : state.currentUser.university.shortName,
-      authorCourse: isAnonymous ? 'Anonymous' : state.currentUser.course,
-      isAuthorVerified: !isAnonymous,
-      content,
-      mediaUrl: postImages.length > 0 ? postImages[0] : undefined,
-      images: postImages,
-      visibility,
-      commentsDisabled,
-      category,
-      timeAgo: 'Just now',
-      likesCount: 0,
-      commentsCount: 0,
-      sharesCount: 0,
-      isLiked: false,
-      isLikedByMe: false,
-      isSaved: false,
-      isSavedByMe: false,
-      isAnonymous,
-      tags: tags.length > 0 ? tags : ['campus', category.toLowerCase()],
-      comments: [],
-    };
-
-    setState((prev) => ({
-      ...prev,
-      posts: [newPost, ...prev.posts],
-    }));
+    void (async () => {
+      const { data, error } = await supabase.from('posts').insert({
+        author_id: author.id,
+        content: content.trim(),
+        category,
+        is_anonymous: isAnonymous,
+        tags: tags.length > 0 ? tags : ['campus', category.toLowerCase()],
+        visibility,
+        comments_disabled: commentsDisabled,
+        media_urls: postImages,
+      }).select('id, created_at').single();
+      if (error || !data) {
+        console.error('Could not publish post:', error?.message || 'No post returned');
+        return;
+      }
+      const newPost: CampusPost = {
+        id: data.id,
+        authorId: author.id,
+        authorName: isAnonymous ? 'Secret Student' : author.displayName,
+        authorAvatar: isAnonymous ? 'https://api.dicebear.com/7.x/bottts/svg?seed=sparkle_anon' : author.avatarUrl,
+        authorUniversity: isAnonymous ? 'Kenyan Campus' : author.university.shortName,
+        authorCourse: isAnonymous ? 'Anonymous' : author.course,
+        isAuthorVerified: !isAnonymous,
+        content: content.trim(),
+        mediaUrl: postImages[0],
+        images: postImages,
+        visibility,
+        commentsDisabled,
+        category,
+        timeAgo: 'Just now',
+        likesCount: 0,
+        commentsCount: 0,
+        sharesCount: 0,
+        isLiked: false,
+        isLikedByMe: false,
+        isSaved: false,
+        isSavedByMe: false,
+        isAnonymous,
+        tags: tags.length > 0 ? tags : ['campus', category.toLowerCase()],
+        comments: [],
+      };
+      setState((prev) => ({
+        ...prev,
+        posts: prev.posts.some((post) => post.id === newPost.id) ? prev.posts : [newPost, ...prev.posts],
+      }));
+    })();
   };
 
   const deletePost = (postId: string) => {
-    setState((prev) => ({
-      ...prev,
-      posts: prev.posts.filter((p) => p.id !== postId),
-    }));
+    const user = state.currentUser;
+    if (!user) return;
+    void (async () => {
+      const { error } = await supabase.from('posts').delete().eq('id', postId).eq('author_id', user.id);
+      if (error) {
+        console.error('Could not delete post:', error.message);
+        return;
+      }
+      setState((prev) => ({ ...prev, posts: prev.posts.filter((post) => post.id !== postId) }));
+    })();
   };
 
   const updatePostCaption = (postId: string, newContent: string) => {
-    setState((prev) => ({
-      ...prev,
-      posts: prev.posts.map((p) => (p.id === postId ? { ...p, content: newContent } : p)),
-    }));
+    const user = state.currentUser;
+    if (!user || !newContent.trim()) return;
+    void (async () => {
+      const { error } = await supabase.from('posts').update({ content: newContent.trim() }).eq('id', postId).eq('author_id', user.id);
+      if (error) {
+        console.error('Could not update post:', error.message);
+        return;
+      }
+      setState((prev) => ({ ...prev, posts: prev.posts.map((post) => post.id === postId ? { ...post, content: newContent.trim() } : post) }));
+    })();
   };
 
   const toggleCommentsDisabled = (postId: string) => {
-    setState((prev) => ({
-      ...prev,
-      posts: prev.posts.map((p) => (p.id === postId ? { ...p, commentsDisabled: !p.commentsDisabled } : p)),
-    }));
+    const post = state.posts.find((item) => item.id === postId);
+    const user = state.currentUser;
+    if (!post || !user || post.authorId !== user.id) return;
+    const nextValue = !post.commentsDisabled;
+    void (async () => {
+      const { error } = await supabase.from('posts').update({ comments_disabled: nextValue }).eq('id', postId).eq('author_id', user.id);
+      if (error) {
+        console.error('Could not update comment setting:', error.message);
+        return;
+      }
+      setState((prev) => ({ ...prev, posts: prev.posts.map((item) => item.id === postId ? { ...item, commentsDisabled: nextValue } : item) }));
+    })();
   };
 
   const toggleSavePost = (postId: string) => {
-    setState((prev) => ({
-      ...prev,
-      posts: prev.posts.map((p) => {
-        if (p.id === postId) {
-          const isSaved = !(p.isSaved || p.isSavedByMe);
-          return {
-            ...p,
-            isSaved,
-            isSavedByMe: isSaved,
-          };
-        }
-        return p;
-      }),
-    }));
+    const user = state.currentUser;
+    const post = state.posts.find((item) => item.id === postId);
+    if (!user || !post) return;
+    const wasSaved = Boolean(post.isSaved || post.isSavedByMe);
+    void (async () => {
+      const result = wasSaved
+        ? await supabase.from('saved_posts').delete().eq('post_id', postId).eq('user_id', user.id)
+        : await supabase.from('saved_posts').insert({ post_id: postId, user_id: user.id });
+      if (result.error) {
+        console.error('Could not update saved post:', result.error.message);
+        return;
+      }
+      setState((prev) => ({ ...prev, posts: prev.posts.map((item) => item.id === postId ? { ...item, isSaved: !wasSaved, isSavedByMe: !wasSaved } : item) }));
+    })();
   };
 
   const toggleLikePost = (postId: string) => {
-    setState((prev) => ({
-      ...prev,
-      posts: prev.posts.map((post) => {
-        if (post.id === postId) {
-          const isLiked = !(post.isLiked || post.isLikedByMe);
-          return {
-            ...post,
-            isLiked,
-            isLikedByMe: isLiked,
-            likesCount: isLiked ? post.likesCount + 1 : Math.max(0, post.likesCount - 1),
-          };
-        }
-        return post;
-      }),
-    }));
+    const user = state.currentUser;
+    const post = state.posts.find((item) => item.id === postId);
+    if (!user || !post) return;
+    const wasLiked = Boolean(post.isLiked || post.isLikedByMe);
+    void (async () => {
+      const result = wasLiked
+        ? await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id)
+        : await supabase.from('post_likes').insert({ post_id: postId, user_id: user.id });
+      if (result.error) {
+        console.error('Could not update post like:', result.error.message);
+        return;
+      }
+      setState((prev) => ({ ...prev, posts: prev.posts.map((item) => item.id === postId ? {
+        ...item,
+        isLiked: !wasLiked,
+        isLikedByMe: !wasLiked,
+        likesCount: Math.max(0, item.likesCount + (wasLiked ? -1 : 1)),
+      } : item) }));
+    })();
   };
 
   const addComment = (postId: string, content: string, isAnonymous: boolean = false) => {
-    if (!state.currentUser) {
+    const author = state.currentUser;
+    if (!author) {
       setState((prev) => ({ ...prev, isAuthModalOpen: true }));
       return;
     }
-
-    const newComment = {
-      id: `cmt_${Date.now()}`,
-      authorName: isAnonymous ? 'Anonymous Comrade' : state.currentUser.displayName,
-      authorAvatar: isAnonymous
-        ? 'https://api.dicebear.com/7.x/bottts/svg?seed=anon'
-        : state.currentUser.avatarUrl,
-      authorUniversity: isAnonymous ? 'Campus' : state.currentUser.university.shortName,
-      content,
-      timeAgo: 'Just now',
-      isAnonymous,
-    };
-
-    setState((prev) => ({
-      ...prev,
-      posts: prev.posts.map((post) => {
-        if (post.id === postId) {
-          return {
-            ...post,
-            commentsCount: post.commentsCount + 1,
-            comments: [...post.comments, newComment],
-          };
-        }
-        return post;
-      }),
-    }));
+    const cleanContent = content.trim();
+    if (!cleanContent) return;
+    void (async () => {
+      const { data, error } = await supabase.from('comments').insert({
+        post_id: postId,
+        author_id: author.id,
+        content: cleanContent,
+        is_anonymous: isAnonymous,
+      }).select('id, created_at').single();
+      if (error || !data) {
+        console.error('Could not publish comment:', error?.message || 'No comment returned');
+        return;
+      }
+      const newComment = {
+        id: data.id,
+        authorName: isAnonymous ? 'Anonymous Comrade' : author.displayName,
+        authorAvatar: isAnonymous ? 'https://api.dicebear.com/7.x/bottts/svg?seed=anon' : author.avatarUrl,
+        authorUniversity: isAnonymous ? 'Campus' : author.university.shortName,
+        content: cleanContent,
+        timeAgo: 'Just now',
+        isAnonymous,
+      };
+      setState((prev) => ({
+        ...prev,
+        posts: prev.posts.map((post) => post.id === postId ? {
+          ...post,
+          commentsCount: post.commentsCount + 1,
+          comments: [...post.comments, newComment],
+        } : post),
+      }));
+    })();
   };
 
   // Gig Actions
