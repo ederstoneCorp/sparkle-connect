@@ -143,7 +143,8 @@ class MainActivity : ComponentActivity() {
                 } else {
                     // MAIN APPLICATION: Shown once authenticated
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                        val isWideScreen = maxWidth >= 840.dp
+                        // Match the web app's Tailwind `md` breakpoint (768px) for navigation/layout parity.
+                        val isWideScreen = maxWidth >= 768.dp
 
                         Scaffold(
                             modifier = Modifier.fillMaxSize(),
