@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSparkle } from '../../context/SparkleContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
@@ -55,6 +55,15 @@ export const AuthModal: React.FC = () => {
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  useEffect(() => {
+    const handleAuthError = (event: Event) => {
+      const message = (event as CustomEvent<string>).detail;
+      if (message) setError(message);
+    };
+    window.addEventListener('sparkle-auth-error', handleAuthError);
+    return () => window.removeEventListener('sparkle-auth-error', handleAuthError);
+  }, []);
 
   if (!isAuthModalOpen && currentUser) return null;
 
