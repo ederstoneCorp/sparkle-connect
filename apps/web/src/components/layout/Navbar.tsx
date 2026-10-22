@@ -13,6 +13,7 @@ import {
   ChevronDown,
   X,
 } from 'lucide-react';
+import { DarkModeToggle } from '../common/DarkModeToggle';
 
 interface NavbarProps {
   onOpenUniversitySearch: () => void;
@@ -115,13 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUniversitySearch, onOpenCa
           </button>
 
           {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="p-2 text-slate-600 dark:text-slate-300 hover:text-sparkle-purple dark:hover:text-sparkle-purple-light hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
-          >
-            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
+          <DarkModeToggle />
 
           {/* Notifications */}
           <button

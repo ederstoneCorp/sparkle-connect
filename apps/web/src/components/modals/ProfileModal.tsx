@@ -10,8 +10,10 @@ import {
   Sparkles,
   Mail,
   Camera,
+  Edit3,
 } from 'lucide-react';
 import { AvatarEditModal } from './AvatarEditModal';
+import { CourseSearchModal } from './CourseSearchModal';
 
 export const ProfileModal: React.FC = () => {
   const {
@@ -19,9 +21,11 @@ export const ProfileModal: React.FC = () => {
     setIsProfileModalOpen,
     currentUser,
     signOut,
+    updateCourse,
   } = useSparkle();
 
   const [isAvatarEditOpen, setIsAvatarEditOpen] = useState(false);
+  const [isCourseSearchOpen, setIsCourseSearchOpen] = useState(false);
 
   if (!isProfileModalOpen || !currentUser) return null;
 
@@ -101,17 +105,26 @@ export const ProfileModal: React.FC = () => {
           </div>
 
           {/* University Details Card */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 space-y-2 mb-4">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 space-y-2.5 mb-4">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
-              <Building className="w-4 h-4 text-sparkle-purple" />
+              <Building className="w-4 h-4 text-sparkle-purple shrink-0" />
               <span>{currentUser.university.name} ({currentUser.university.shortName})</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-              <BookOpen className="w-4 h-4 text-sparkle-orange" />
-              <span>{currentUser.course} • Year {currentUser.yearOfStudy}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <BookOpen className="w-4 h-4 text-sparkle-orange shrink-0" />
+                <span>{currentUser.course} • Year {currentUser.yearOfStudy}</span>
+              </div>
+              <button
+                onClick={() => setIsCourseSearchOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-sparkle-purple/10 hover:bg-sparkle-purple/20 text-sparkle-purple font-bold text-[10px] flex items-center gap-1 transition-all"
+              >
+                <Edit3 className="w-3 h-3" />
+                <span>Change Course</span>
+              </button>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-500">
-              <Calendar className="w-4 h-4 text-slate-400" />
+              <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
               <span>Joined {currentUser.joinedDate}</span>
             </div>
           </div>
@@ -163,6 +176,13 @@ export const ProfileModal: React.FC = () => {
     <AvatarEditModal
       isOpen={isAvatarEditOpen}
       onClose={() => setIsAvatarEditOpen(false)}
+    />
+
+    <CourseSearchModal
+      isOpen={isCourseSearchOpen}
+      onClose={() => setIsCourseSearchOpen(false)}
+      onSelectCourse={(courseTitle) => updateCourse(courseTitle)}
+      selectedUniversityId={currentUser.university.id}
     />
   </>
   );

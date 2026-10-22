@@ -66,6 +66,7 @@ interface SparkleContextType extends SparkleState {
   signOut: () => void;
   switchAccount: (accountId: string) => void;
   updateAvatar: (newAvatarUrl: string) => void;
+  updateCourse: (newCourse: string) => void;
   addPost: (
     content: string,
     category: PostCategory,
@@ -513,6 +514,26 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const updateCourse = (newCourse: string) => {
+    setState((prev) => {
+      if (!prev.currentUser) return prev;
+      const updatedUser: StudentProfile = {
+        ...prev.currentUser,
+        course: newCourse,
+      };
+      const updatedAccounts = prev.accounts.map((acc) =>
+        acc.id === prev.currentAccountId
+          ? { ...acc, profile: updatedUser }
+          : acc
+      );
+      return {
+        ...prev,
+        currentUser: updatedUser,
+        accounts: updatedAccounts,
+      };
+    });
+  };
+
   // Post Actions
   const addPost = (
     content: string,
@@ -847,6 +868,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         signOut,
         switchAccount,
         updateAvatar,
+        updateCourse,
         addPost,
         deletePost,
         updatePostCaption,
