@@ -1,9 +1,7 @@
 package com.example
 
 import android.os.Bundle
-import android.view.View
-import android.view.WindowInsetsController
-import android.os.Build
+
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -47,31 +45,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // ── Fullscreen / Immersive Mode ──────────────────────────────────────
-        // Hides the device status bar and navigation bar for a true fullscreen
-        // experience. Uses WindowInsetsController on API 30+ for stability,
-        // falls back to legacy systemUiVisibility on older devices.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.insetsController?.let { controller ->
-                controller.hide(
-                    android.view.WindowInsets.Type.statusBars() or
-                    android.view.WindowInsets.Type.navigationBars()
-                )
-                controller.systemBarsBehavior =
-                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            )
-        }
-        // ────────────────────────────────────────────────────────────────────
+
 
         setContent {
             SparkleConnectTheme {
@@ -82,18 +56,20 @@ class MainActivity : ComponentActivity() {
 
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                 val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
-                val registeredAccounts by viewModel.registeredAccounts.collectAsStateWithLifecycle()
+                val deviceLoggedInAccounts by viewModel.deviceLoggedInAccounts.collectAsStateWithLifecycle()
                 val filteredPosts by viewModel.filteredPosts.collectAsStateWithLifecycle()
                 val filteredGigs by viewModel.filteredGigs.collectAsStateWithLifecycle()
                 val communities by viewModel.communities.collectAsStateWithLifecycle()
                 val events by viewModel.events.collectAsStateWithLifecycle()
                 val conversations by viewModel.conversations.collectAsStateWithLifecycle()
                 val notifications by viewModel.notifications.collectAsStateWithLifecycle()
+                val moments by viewModel.activeMoments.collectAsStateWithLifecycle()
                 val snackbarHostState = remember { SnackbarHostState() }
                 val coroutineScope = rememberCoroutineScope()
                 val authManager = remember { com.example.data.auth.AuthManager(this@MainActivity) }
                 val firebaseUser by authManager.currentUser.collectAsStateWithLifecycle()
                 var showCameraCapture by remember { mutableStateOf(false) }
+                var showCreateMomentDialog by remember { mutableStateOf(false) }
                 var showSplash by remember { mutableStateOf(true) }
 
                 LaunchedEffect(Unit) {
@@ -119,7 +95,7 @@ class MainActivity : ComponentActivity() {
                     // AUTHENTICATION SCREEN GATE: Shown on app start
                     AuthScreen(
                         universities = viewModel.universities,
-                        registeredAccounts = registeredAccounts,
+                        registeredAccounts = deviceLoggedInAccounts,
                         onSignIn = { identifier, password ->
                             viewModel.signIn(identifier, password)
                         },
@@ -254,11 +230,27 @@ class MainActivity : ComponentActivity() {
                                             composable(Screen.Feed.route) {
                                                 FeedScreen(
                                                     posts = filteredPosts,
+                                                    moments = moments,
+                                                    currentUser = loggedInUser,
                                                     selectedCategory = uiState.selectedCategory,
                                                     onSelectCategory = { viewModel.setCategory(it) },
                                                     onLikePost = { viewModel.toggleLike(it) },
                                                     onAddComment = { postId, text -> viewModel.addComment(postId, text) },
                                                     onCreatePostClick = { viewModel.showCreatePost(true) },
+                                                    onCreateMomentClick = { showCreateMomentDialog = true },
+                                                    onDeletePost = { viewModel.deletePost(it) },
+                                                    onUpdateCaption = { postId, cap -> viewModel.updatePostCaption(postId, cap) },
+                                                    onToggleSavePost = { viewModel.toggleSavePost(it) },
+                                                    onToggleCommentsDisabled = { viewModel.togglePostCommentsDisabled(it) },
+                                                    onReportPost = { postId, reason -> viewModel.reportPost(postId, reason) },
+                                                    onBlockUser = { viewModel.blockUser(it) },
+                                                    onDeleteComment = { postId, cId -> viewModel.deleteComment(postId, cId) },
+                                                    onDeleteMoment = { viewModel.deleteMoment(it) },
+                                                    onSendMomentReaction = { momentId, reaction ->
+                                                        coroutineScope.launch {
+                                                            snackbarHostState.showSnackbar("Reaction sent!")
+                                                        }
+                                                    },
                                                     visiblePostLimit = uiState.visiblePostLimit,
                                                     isLoadingMore = uiState.isLoadingMorePosts,
                                                     onLoadMorePosts = { viewModel.loadMorePosts() }
@@ -344,11 +336,27 @@ class MainActivity : ComponentActivity() {
                                         composable(Screen.Feed.route) {
                                             FeedScreen(
                                                 posts = filteredPosts,
+                                                moments = moments,
+                                                currentUser = loggedInUser,
                                                 selectedCategory = uiState.selectedCategory,
                                                 onSelectCategory = { viewModel.setCategory(it) },
                                                 onLikePost = { viewModel.toggleLike(it) },
                                                 onAddComment = { postId, text -> viewModel.addComment(postId, text) },
                                                 onCreatePostClick = { viewModel.showCreatePost(true) },
+                                                onCreateMomentClick = { showCreateMomentDialog = true },
+                                                onDeletePost = { viewModel.deletePost(it) },
+                                                onUpdateCaption = { postId, cap -> viewModel.updatePostCaption(postId, cap) },
+                                                onToggleSavePost = { viewModel.toggleSavePost(it) },
+                                                onToggleCommentsDisabled = { viewModel.togglePostCommentsDisabled(it) },
+                                                onReportPost = { postId, reason -> viewModel.reportPost(postId, reason) },
+                                                onBlockUser = { viewModel.blockUser(it) },
+                                                onDeleteComment = { postId, cId -> viewModel.deleteComment(postId, cId) },
+                                                onDeleteMoment = { viewModel.deleteMoment(it) },
+                                                onSendMomentReaction = { momentId, reaction ->
+                                                    coroutineScope.launch {
+                                                        snackbarHostState.showSnackbar("Reaction sent!")
+                                                    }
+                                                },
                                                 visiblePostLimit = uiState.visiblePostLimit,
                                                 isLoadingMore = uiState.isLoadingMorePosts,
                                                 onLoadMorePosts = { viewModel.loadMorePosts() }
@@ -413,10 +421,27 @@ class MainActivity : ComponentActivity() {
 
                         // Modals and Sheets
                         if (uiState.showCreatePostDialog) {
-                            CreatePostDialog(
+                            com.example.ui.components.EnhancedCreatePostDialog(
                                 onDismiss = { viewModel.showCreatePost(false) },
-                                onSubmit = { content, category, isAnon ->
-                                    viewModel.submitPost(content, category, isAnon)
+                                onSubmit = { content, category, isAnon, images, visibility, commentsDisabled ->
+                                    viewModel.submitPost(
+                                        content = content,
+                                        category = category,
+                                        isAnonymous = isAnon,
+                                        images = images,
+                                        visibility = visibility,
+                                        commentsDisabled = commentsDisabled
+                                    )
+                                }
+                            )
+                        }
+
+                        if (showCreateMomentDialog) {
+                            com.example.ui.components.CreateSparkleMomentDialog(
+                                onDismiss = { showCreateMomentDialog = false },
+                                onSubmit = { caption, mediaUri, bgHex, audience ->
+                                    viewModel.createMoment(caption, mediaUri, bgHex, audience)
+                                    showCreateMomentDialog = false
                                 }
                             )
                         }
@@ -469,6 +494,15 @@ class MainActivity : ComponentActivity() {
                                 onTakePhotoClick = {
                                     showCameraCapture = true
                                 },
+                                onUpdateAvatar = { uri ->
+                                    viewModel.updateProfileAvatar(uri)
+                                },
+                                onRemoveAvatar = {
+                                    viewModel.removeProfileAvatar()
+                                },
+                                onTogglePrivacy = {
+                                    viewModel.toggleAccountPrivacy()
+                                },
                                 onDismiss = { viewModel.showProfile(false) },
                                 onSaveProfile = { bio, fac, course, year ->
                                     viewModel.updateProfile(bio, fac, course, year)
@@ -483,6 +517,7 @@ class MainActivity : ComponentActivity() {
                             com.example.ui.camera.StudentProfilePhotoCaptureDialog(
                                 onDismiss = { showCameraCapture = false },
                                 onPhotoCaptured = { uri ->
+                                    viewModel.updateProfileAvatar(uri.toString())
                                     coroutineScope.launch {
                                         snackbarHostState.showSnackbar("Student profile photo updated!")
                                     }

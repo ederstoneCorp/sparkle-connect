@@ -62,6 +62,13 @@ class SparkleViewModel(
     val conversations = repository.conversations
     val notifications = repository.notifications
     val universities = repository.universitiesList
+    val moments = repository.moments
+
+    // Sparkle Moments active within 24 hours
+    val activeMoments: StateFlow<List<SparkleMoment>> = repository.moments.map { list ->
+        val cutoff = System.currentTimeMillis() - (24 * 3600 * 1000L)
+        list.filter { it.createdAtTimestamp >= cutoff }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Filtered Posts
     val filteredPosts = combine(
@@ -208,13 +215,118 @@ class SparkleViewModel(
     }
 
     // Actions
-    fun submitPost(content: String, category: PostCategory, isAnonymous: Boolean) {
-        repository.addPost(content, category, isAnonymous)
+    fun submitPost(
+        content: String,
+        category: PostCategory,
+        isAnonymous: Boolean,
+        images: List<String> = emptyList(),
+        visibility: PostVisibility = PostVisibility.CAMPUS_COMMUNITY,
+        commentsDisabled: Boolean = false
+    ) {
+        repository.addPost(
+            content = content,
+            category = category,
+            isAnonymous = isAnonymous,
+            images = images,
+            visibility = visibility,
+            commentsDisabled = commentsDisabled
+        )
         _uiState.update {
             it.copy(
                 showCreatePostDialog = false,
                 snackbarMessage = if (isAnonymous) "Secret post published safely!" else "Post shared with campus!"
             )
+        }
+    }
+
+    fun deletePost(postId: String) {
+        repository.deletePost(postId)
+        _uiState.update { it.copy(snackbarMessage = "Post deleted.") }
+    }
+
+    fun updatePostCaption(postId: String, newCaption: String) {
+        repository.updatePostCaption(postId, newCaption)
+        _uiState.update { it.copy(snackbarMessage = "Caption updated!") }
+    }
+
+    fun togglePostCommentsDisabled(postId: String) {
+        repository.togglePostCommentsDisabled(postId)
+        _uiState.update { it.copy(snackbarMessage = "Post comment settings updated.") }
+    }
+
+    fun toggleSavePost(postId: String) {
+        repository.toggleSavePost(postId)
+        val post = repository.posts.value.find { it.id == postId }
+        val msg = if (post?.isSavedByMe == true) "Post saved to your bookmarks!" else "Post removed from bookmarks."
+        _uiState.update { it.copy(snackbarMessage = msg) }
+    }
+
+    fun deleteComment(postId: String, commentId: String) {
+        repository.deleteComment(postId, commentId)
+        _uiState.update { it.copy(snackbarMessage = "Comment deleted.") }
+    }
+
+    fun reportPost(postId: String, reason: String) {
+        repository.reportPost(postId, reason)
+        _uiState.update { it.copy(snackbarMessage = "Post reported to campus moderation.") }
+    }
+
+    fun reportComment(postId: String, commentId: String, reason: String) {
+        repository.reportComment(postId, commentId, reason)
+        _uiState.update { it.copy(snackbarMessage = "Comment reported.") }
+    }
+
+    fun blockUser(userId: String) {
+        repository.blockUser(userId)
+        _uiState.update { it.copy(snackbarMessage = "User blocked. Their posts and interactions are hidden.") }
+    }
+
+    fun unblockUser(userId: String) {
+        repository.unblockUser(userId)
+        _uiState.update { it.copy(snackbarMessage = "User unblocked.") }
+    }
+
+    // Sparkle Moments Operations
+    fun createMoment(
+        textCaption: String,
+        mediaUri: String? = null,
+        bgHex: String = "#6C3BFF",
+        audience: MomentAudience = MomentAudience.PUBLIC
+    ) {
+        repository.createMoment(
+            textCaption = textCaption,
+            mediaUri = mediaUri,
+            bgHex = bgHex,
+            audience = audience
+        )
+        _uiState.update { it.copy(snackbarMessage = "Sparkle Moment shared! Visible for 24 hours ✨") }
+    }
+
+    fun markMomentViewed(momentId: String) {
+        repository.markMomentViewed(momentId)
+    }
+
+    fun deleteMoment(momentId: String) {
+        repository.deleteMoment(momentId)
+        _uiState.update { it.copy(snackbarMessage = "Sparkle Moment deleted.") }
+    }
+
+    // Profile Photo & Privacy
+    fun updateProfileAvatar(avatarUri: String) {
+        repository.updateProfileAvatar(avatarUri)
+        _uiState.update { it.copy(snackbarMessage = "Profile photo updated successfully!") }
+    }
+
+    fun removeProfileAvatar() {
+        repository.removeProfileAvatar()
+        _uiState.update { it.copy(snackbarMessage = "Profile photo removed.") }
+    }
+
+    fun toggleAccountPrivacy() {
+        repository.toggleAccountPrivacy()
+        val isPrivate = currentUser.value?.isPrivateAccount == true
+        _uiState.update {
+            it.copy(snackbarMessage = if (isPrivate) "Account set to Private 🔒" else "Account set to Public 🌍")
         }
     }
 
@@ -283,11 +395,43 @@ class SparkleViewModel(
     }
 
     fun switchUniversity(university: University) {
-        repository.switchUniversity(university)
-        _uiState.update { it.copy(snackbarMessage = "Campus switched to ${university.shortName}") }
+        // Enforce user policy: The university selected during account creation cannot be changed in profile
+        _uiState.update { it.copy(snackbarMessage = "Campus cannot be changed: Your registered university affiliation is permanent.") }
     }
 
+    private val devicePrefs = getApplication<Application>().getSharedPreferences("sparkle_device_logins", android.content.Context.MODE_PRIVATE)
+
+    private val _deviceLoggedInEmails = MutableStateFlow<Set<String>>(
+        devicePrefs.getStringSet("logged_in_device_emails", emptySet())?.toSet() ?: emptySet()
+    )
+
+    // ONLY accounts that previously logged in on THIS SAME DEVICE are exposed here!
+    val deviceLoggedInAccounts: StateFlow<List<RegisteredAccount>> = combine(
+        repository.registeredAccounts,
+        _deviceLoggedInEmails
+    ) { allAccounts, loggedInKeys ->
+        allAccounts.filter { acc ->
+            val emailLower = acc.email.lowercase().trim()
+            val gEmailLower = acc.googleEmail?.lowercase()?.trim()
+            val usernameLower = acc.profile.username.lowercase().trim()
+            loggedInKeys.contains(emailLower) ||
+            (gEmailLower != null && loggedInKeys.contains(gEmailLower)) ||
+            loggedInKeys.contains(usernameLower) ||
+            loggedInKeys.contains(acc.id)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val registeredAccounts = repository.registeredAccounts
+
+    private fun markDeviceLogin(vararg identifiers: String?) {
+        val toAdd = identifiers.filterNotNull().map { it.lowercase().trim() }.filter { it.isNotBlank() }
+        if (toAdd.isNotEmpty()) {
+            val current = devicePrefs.getStringSet("logged_in_device_emails", emptySet())?.toSet() ?: emptySet()
+            val updated = current + toAdd
+            devicePrefs.edit().putStringSet("logged_in_device_emails", updated).apply()
+            _deviceLoggedInEmails.value = updated
+        }
+    }
 
     fun signUp(
         fullName: String,
@@ -306,6 +450,7 @@ class SparkleViewModel(
             socialProvider, socialHandle, googleEmail
         )
         if (res.isSuccess) {
+            markDeviceLogin(email, username, googleEmail, res.getOrNull()?.id)
             _uiState.update {
                 it.copy(snackbarMessage = "Welcome to Sparkle Connect, ${res.getOrNull()?.displayName}! Your profile is stored in the database.")
             }
@@ -323,6 +468,7 @@ class SparkleViewModel(
     ): Result<StudentProfile> {
         val res = repository.signUpWithGoogle(realName, googleEmail, university, course, yearOfStudy, avatarUrl)
         if (res.isSuccess) {
+            markDeviceLogin(googleEmail, res.getOrNull()?.id, res.getOrNull()?.username)
             _uiState.update {
                 it.copy(snackbarMessage = "Google account linked and stored in database! Welcome, ${res.getOrNull()?.displayName}!")
             }
@@ -333,6 +479,7 @@ class SparkleViewModel(
     fun signIn(identifier: String, password: String): Result<StudentProfile> {
         val res = repository.signIn(identifier, password)
         if (res.isSuccess) {
+            markDeviceLogin(identifier, res.getOrNull()?.email, res.getOrNull()?.username, res.getOrNull()?.id)
             _uiState.update { it.copy(snackbarMessage = "Welcome back, ${res.getOrNull()?.displayName}!") }
         }
         return res
@@ -345,6 +492,7 @@ class SparkleViewModel(
     ): Result<StudentProfile> {
         val res = repository.signInWithGoogleAccount(googleEmail, displayName, university)
         if (res.isSuccess) {
+            markDeviceLogin(googleEmail, res.getOrNull()?.email, res.getOrNull()?.username, res.getOrNull()?.id)
             _uiState.update { it.copy(snackbarMessage = "Welcome, ${res.getOrNull()?.displayName}! Logged in via Gmail & recorded in database.") }
         }
         return res
@@ -353,6 +501,7 @@ class SparkleViewModel(
     fun signInWithSocial(provider: String, handleOrEmail: String): Result<StudentProfile> {
         val res = repository.signInWithSocial(provider, handleOrEmail)
         if (res.isSuccess) {
+            markDeviceLogin(handleOrEmail, res.getOrNull()?.email, res.getOrNull()?.username, res.getOrNull()?.id)
             _uiState.update { it.copy(snackbarMessage = "Signed in as ${res.getOrNull()?.displayName} via $provider") }
         }
         return res

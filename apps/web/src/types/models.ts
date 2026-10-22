@@ -27,6 +27,8 @@ export interface StudentProfile {
   skills: string[];
   interests: string[];
   joinedDate: string;
+  photos?: string[];
+  isPrivateAccount?: boolean;
 }
 
 export interface RegisteredAccount {
@@ -39,6 +41,8 @@ export interface RegisteredAccount {
   socialHandle?: string | null;
   isRecordedInDatabase: boolean;
 }
+
+export type PostVisibility = 'PUBLIC' | 'CONNECTIONS' | 'CAMPUS_COMMUNITY' | 'PRIVATE';
 
 export type PostCategory =
   | 'ALL'
@@ -80,6 +84,10 @@ export interface CampusPost {
   timeAgo: string;
   comments: PostComment[];
   mediaUrl?: string | null;
+  images?: string[];
+  storagePaths?: string[];
+  visibility?: PostVisibility;
+  commentsDisabled?: boolean;
   tags?: string[];
   sharesCount?: number;
 }

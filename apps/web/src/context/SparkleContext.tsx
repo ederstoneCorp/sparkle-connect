@@ -10,6 +10,7 @@ import {
   SparkleNotification,
   University,
   PostCategory,
+  PostVisibility,
   ChatMessage,
   GigApplication,
 } from '../types/models';
@@ -64,7 +65,21 @@ interface SparkleContextType extends SparkleState {
   }) => Promise<{ success: boolean; error?: string }>;
   signOut: () => void;
   switchAccount: (accountId: string) => void;
-  addPost: (content: string, category: PostCategory, isAnonymous: boolean, tags: string[], mediaUrl?: string) => void;
+  updateAvatar: (newAvatarUrl: string) => void;
+  addPost: (
+    content: string,
+    category: PostCategory,
+    isAnonymous: boolean,
+    tags: string[],
+    mediaUrl?: string,
+    images?: string[],
+    visibility?: PostVisibility,
+    commentsDisabled?: boolean
+  ) => void;
+  deletePost: (postId: string) => void;
+  updatePostCaption: (postId: string, newContent: string) => void;
+  toggleCommentsDisabled: (postId: string) => void;
+  toggleSavePost: (postId: string) => void;
   toggleLikePost: (postId: string) => void;
   addComment: (postId: string, content: string, isAnonymous?: boolean) => void;
   createGig: (title: string, description: string, budgetKes: number, category: string, deadline: string, skills: string[]) => void;
@@ -473,18 +488,48 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Avatar update
+  const updateAvatar = (newAvatarUrl: string) => {
+    setState((prev) => {
+      if (!prev.currentUser) return prev;
+      const updatedPhotos = [newAvatarUrl, ...(prev.currentUser.photos || [])].filter(
+        (url, idx, self) => self.indexOf(url) === idx
+      );
+      const updatedUser: StudentProfile = {
+        ...prev.currentUser,
+        avatarUrl: newAvatarUrl,
+        photos: updatedPhotos,
+      };
+      const updatedAccounts = prev.accounts.map((acc) =>
+        acc.id === prev.currentAccountId
+          ? { ...acc, profile: updatedUser }
+          : acc
+      );
+      return {
+        ...prev,
+        currentUser: updatedUser,
+        accounts: updatedAccounts,
+      };
+    });
+  };
+
   // Post Actions
   const addPost = (
     content: string,
     category: PostCategory,
     isAnonymous: boolean,
     tags: string[],
-    mediaUrl?: string
+    mediaUrl?: string,
+    images?: string[],
+    visibility: PostVisibility = 'CAMPUS_COMMUNITY',
+    commentsDisabled: boolean = false
   ) => {
     if (!state.currentUser) {
       setState((prev) => ({ ...prev, isAuthModalOpen: true }));
       return;
     }
+
+    const postImages = images && images.length > 0 ? images : mediaUrl ? [mediaUrl] : [];
 
     const newPost: CampusPost = {
       id: `post_${Date.now()}`,
@@ -497,7 +542,10 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       authorCourse: isAnonymous ? 'Anonymous' : state.currentUser.course,
       isAuthorVerified: !isAnonymous,
       content,
-      mediaUrl,
+      mediaUrl: postImages.length > 0 ? postImages[0] : undefined,
+      images: postImages,
+      visibility,
+      commentsDisabled,
       category,
       timeAgo: 'Just now',
       likesCount: 0,
@@ -506,6 +554,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       isLiked: false,
       isLikedByMe: false,
       isSaved: false,
+      isSavedByMe: false,
       isAnonymous,
       tags: tags.length > 0 ? tags : ['campus', category.toLowerCase()],
       comments: [],
@@ -514,6 +563,44 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setState((prev) => ({
       ...prev,
       posts: [newPost, ...prev.posts],
+    }));
+  };
+
+  const deletePost = (postId: string) => {
+    setState((prev) => ({
+      ...prev,
+      posts: prev.posts.filter((p) => p.id !== postId),
+    }));
+  };
+
+  const updatePostCaption = (postId: string, newContent: string) => {
+    setState((prev) => ({
+      ...prev,
+      posts: prev.posts.map((p) => (p.id === postId ? { ...p, content: newContent } : p)),
+    }));
+  };
+
+  const toggleCommentsDisabled = (postId: string) => {
+    setState((prev) => ({
+      ...prev,
+      posts: prev.posts.map((p) => (p.id === postId ? { ...p, commentsDisabled: !p.commentsDisabled } : p)),
+    }));
+  };
+
+  const toggleSavePost = (postId: string) => {
+    setState((prev) => ({
+      ...prev,
+      posts: prev.posts.map((p) => {
+        if (p.id === postId) {
+          const isSaved = !(p.isSaved || p.isSavedByMe);
+          return {
+            ...p,
+            isSaved,
+            isSavedByMe: isSaved,
+          };
+        }
+        return p;
+      }),
     }));
   };
 
@@ -759,7 +846,12 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         signUp,
         signOut,
         switchAccount,
+        updateAvatar,
         addPost,
+        deletePost,
+        updatePostCaption,
+        toggleCommentsDisabled,
+        toggleSavePost,
         toggleLikePost,
         addComment,
         createGig,

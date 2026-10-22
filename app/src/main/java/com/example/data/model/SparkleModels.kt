@@ -25,6 +25,8 @@ data class StudentProfile(
     val interests: List<String> = emptyList(),
     val email: String = "",
     val joinedDate: String = "September 2024",
+    val isPrivateAccount: Boolean = false,
+    val blockedUserIds: List<String> = emptyList(),
 )
 
 enum class PostCategory(val displayName: String, val icon: String) {
@@ -38,14 +40,23 @@ enum class PostCategory(val displayName: String, val icon: String) {
     ENTREPRENEURSHIP("Startup & Biz", "trending_up"),
 }
 
+enum class PostVisibility(val label: String, val icon: String) {
+    PUBLIC("Public", "public"),
+    CAMPUS_COMMUNITY("Campus Community", "school"),
+    CONNECTIONS_ONLY("Connections Only", "group"),
+    PRIVATE("Only Me", "lock")
+}
+
 data class PostComment(
     val id: String = UUID.randomUUID().toString(),
+    val authorId: String = "",
     val authorName: String,
     val authorAvatar: String,
     val authorUniversity: String,
     val content: String,
     val timeAgo: String = "Just now",
     val isAnonymous: Boolean = false,
+    val isReported: Boolean = false,
 )
 
 data class CampusPost(
@@ -66,6 +77,31 @@ data class CampusPost(
     val timeAgo: String = "10m ago",
     val comments: List<PostComment> = emptyList(),
     val mediaUrl: String? = null,
+    val images: List<String> = emptyList(),
+    val visibility: PostVisibility = PostVisibility.PUBLIC,
+    val commentsDisabled: Boolean = false,
+    val isReported: Boolean = false,
+)
+
+enum class MomentAudience(val label: String) {
+    PUBLIC("All Campuses"),
+    CAMPUS_ONLY("My University Only"),
+    CONNECTIONS_ONLY("Connections Only")
+}
+
+data class SparkleMoment(
+    val id: String = UUID.randomUUID().toString(),
+    val authorId: String,
+    val authorName: String,
+    val authorAvatar: String,
+    val authorUniversity: String,
+    val mediaUri: String? = null,
+    val textCaption: String = "",
+    val backgroundColorHex: String = "#6C3BFF",
+    val createdAtTimestamp: Long = System.currentTimeMillis(),
+    val audience: MomentAudience = MomentAudience.PUBLIC,
+    val viewedByUsers: List<String> = emptyList(),
+    val isViewedByMe: Boolean = false,
 )
 
 enum class GigOpportunityType(val label: String) {

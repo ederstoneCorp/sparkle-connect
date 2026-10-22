@@ -226,8 +226,10 @@ fun ChatThreadView(
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    // Auto-scroll to latest message whenever a new message is sent or received
-    LaunchedEffect(conversation.messages.size) {
+    val imeBottom = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current)
+
+    // Auto-scroll to latest message whenever a new message is sent, received, or the software keyboard opens
+    LaunchedEffect(conversation.messages.size, imeBottom) {
         if (conversation.messages.isNotEmpty()) {
             listState.animateScrollToItem(conversation.messages.size - 1)
         }
@@ -237,6 +239,8 @@ fun ChatThreadView(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+            .imePadding()
     ) {
         // Chat Header
         Surface(
@@ -339,7 +343,9 @@ fun ChatThreadView(
         Surface(
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 4.dp,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
         ) {
             Row(
                 modifier = Modifier

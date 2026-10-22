@@ -44,15 +44,48 @@ fun SparkleTopBar(
     userAvatarInitial: String,
     modifier: Modifier = Modifier,
 ) {
-    var showUniMenu by remember { mutableStateOf(false) }
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    val isCompact = screenWidth < 600
+    val isMedium = screenWidth in 600..839
+    val isExpanded = screenWidth >= 840
+
+    // Responsive upper/top border shape adapting dynamically to screen type
+    val topBarShape = when {
+        isCompact -> RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp) // Curving contour that hugs mobile screen lobes
+        isMedium -> RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp) // Elevated floating curve for foldables
+        else -> RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp) // Sleek desktop/tablet header contour
+    }
+
+    val topBarPadding = when {
+        isCompact -> Modifier.padding(horizontal = 0.dp)
+        isMedium -> Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        else -> Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+    }
+
+    val topBarBorder = when {
+        isCompact -> BorderStroke(1.dp, SparkleBorder.copy(alpha = 0.6f))
+        isMedium -> BorderStroke(1.5.dp, SparklePurple.copy(alpha = 0.3f))
+        else -> BorderStroke(1.dp, SparkleBorder)
+    }
+
+    var showUniSearchDialog by remember { mutableStateOf(false) }
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(topBarPadding),
+        shape = topBarShape,
+        border = topBarBorder,
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp
+        tonalElevation = if (isMedium) 4.dp else 2.dp,
+        shadowElevation = if (isCompact) 2.dp else 3.dp
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -110,62 +143,57 @@ fun SparkleTopBar(
 
                 // Action controls: Uni Filter, AI Search, Search, Notifs, Profile
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // University filter badge
-                    Box {
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = SparklePurple.copy(alpha = 0.12f),
-                            modifier = Modifier
-                                .clickable { showUniMenu = true }
-                                .testTag("university_filter_chip")
+                    // Searchable University Filter Badge (with Google Grounded Search)
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = SparklePurple.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, SparklePurple.copy(alpha = 0.25f)),
+                        modifier = Modifier
+                            .clickable { showUniSearchDialog = true }
+                            .testTag("university_filter_chip")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = selectedUniversity ?: "All Campuses",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        color = SparklePurple,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = "Select University",
-                                    tint = SparklePurple,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-
-                        DropdownMenu(
-                            expanded = showUniMenu,
-                            onDismissRequest = { showUniMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("All Universities (Kenya)") },
-                                onClick = {
-                                    onSelectUniversity(null)
-                                    showUniMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Public, contentDescription = null, tint = SparklePurple)
-                                }
+                            Icon(
+                                imageVector = Icons.Default.School,
+                                contentDescription = null,
+                                tint = SparklePurple,
+                                modifier = Modifier.size(16.dp)
                             )
-                            universities.forEach { uni ->
-                                DropdownMenuItem(
-                                    text = { Text("${uni.shortName} - ${uni.name}") },
-                                    onClick = {
-                                        onSelectUniversity(uni.shortName)
-                                        showUniMenu = false
-                                    },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.School, contentDescription = null, tint = SparklePurple)
-                                    }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = selectedUniversity ?: "All Campuses",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = SparklePurple,
+                                    fontWeight = FontWeight.SemiBold
                                 )
-                            }
+                            )
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search University",
+                                tint = SparklePurple,
+                                modifier = Modifier.size(14.dp)
+                            )
                         }
+                    }
+
+                    if (showUniSearchDialog) {
+                        SearchableUniversityDialog(
+                            universities = universities,
+                            selectedUniversity = universities.find { it.shortName == selectedUniversity || it.name == selectedUniversity },
+                            onSelectUniversity = { uni ->
+                                onSelectUniversity(uni.shortName)
+                                showUniSearchDialog = false
+                            },
+                            allowAllCampuses = true,
+                            onSelectAllCampuses = {
+                                onSelectUniversity(null)
+                                showUniSearchDialog = false
+                            },
+                            onDismiss = { showUniSearchDialog = false }
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(4.dp))

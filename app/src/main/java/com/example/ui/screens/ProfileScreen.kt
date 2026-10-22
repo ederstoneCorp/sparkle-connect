@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,6 +22,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.data.model.*
 import com.example.ui.theme.*
 
@@ -33,6 +40,9 @@ fun ProfileSheet(
     onSignInWithGoogle: () -> Unit = {},
     onSignOut: () -> Unit = {},
     onTakePhotoClick: () -> Unit = {},
+    onUpdateAvatar: (String) -> Unit = {},
+    onRemoveAvatar: () -> Unit = {},
+    onTogglePrivacy: () -> Unit = {},
     onDismiss: () -> Unit,
     onSaveProfile: (String, String, String, Int) -> Unit,
     onSwitchUniversity: (University) -> Unit
@@ -42,7 +52,16 @@ fun ProfileSheet(
     var faculty by remember { mutableStateOf(user.faculty) }
     var course by remember { mutableStateOf(user.course) }
     var year by remember { mutableStateOf(user.yearOfStudy) }
-    var showUniMenu by remember { mutableStateOf(false) }
+    var showPhotoOptionsDialog by remember { mutableStateOf(false) }
+
+    // Modern Android Photo Picker (zero broad storage permissions)
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            onUpdateAvatar(uri.toString())
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -62,23 +81,35 @@ fun ProfileSheet(
             ) {
                 Box(
                     modifier = Modifier
-                        .clickable { onTakePhotoClick() }
+                        .clickable { showPhotoOptionsDialog = true }
                         .testTag("avatar_take_photo_button")
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(68.dp)
-                            .clip(CircleShape)
-                            .background(SparklePrimaryGradient),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = user.displayName.split(" ").mapNotNull { it.firstOrNull() }.joinToString(""),
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
+                    if (user.avatarUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = user.avatarUrl,
+                            contentDescription = "Profile Photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(68.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, SparklePurple, CircleShape)
                         )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(68.dp)
+                                .clip(CircleShape)
+                                .background(SparklePrimaryGradient),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = user.displayName.split(" ").mapNotNull { it.firstOrNull() }.joinToString(""),
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
                     }
 
                     Box(
@@ -91,7 +122,7 @@ fun ProfileSheet(
                     ) {
                         Icon(
                             imageVector = Icons.Default.CameraAlt,
-                            contentDescription = "Take Profile Photo",
+                            contentDescription = "Edit Profile Photo",
                             tint = Color.White,
                             modifier = Modifier.size(14.dp)
                         )
@@ -132,27 +163,52 @@ fun ProfileSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Switch Campus Button
-            OutlinedButton(
-                onClick = { showUniMenu = true },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+            // Verified & Locked University Affiliation (Cannot be changed after account creation)
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = BorderStroke(1.dp, SparkleBorder),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.SwapHoriz, contentDescription = null, tint = SparklePurple)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Campus: ${user.university.shortName} (Tap to Switch)", color = SparklePurple)
-
-                DropdownMenu(
-                    expanded = showUniMenu,
-                    onDismissRequest = { showUniMenu = false }
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    universities.forEach { uni ->
-                        DropdownMenuItem(
-                            text = { Text("${uni.shortName} - ${uni.name}") },
-                            onClick = {
-                                onSwitchUniversity(uni)
-                                showUniMenu = false
-                            }
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(SparklePurple.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Locked University",
+                            tint = SparklePurple,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "${user.university.shortName} - ${user.university.name}",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Verified,
+                                contentDescription = "Verified Campus",
+                                tint = SparkleMint,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Text(
+                            text = "Permanent Affiliation • University selected during account creation cannot be changed",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
                         )
                     }
                 }
@@ -272,6 +328,61 @@ fun ProfileSheet(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                // Account Privacy Setting (Public vs Private Profile)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, SparkleBorder.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = if (user.isPrivateAccount) Icons.Default.Lock else Icons.Default.Public,
+                                contentDescription = null,
+                                tint = if (user.isPrivateAccount) SparklePink else SparklePurple,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = if (user.isPrivateAccount) "Private Account" else "Public Profile",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Text(
+                                    text = if (user.isPrivateAccount)
+                                        "Only accepted campus connections can view your updates"
+                                    else
+                                        "All verified students can see your campus posts & profile",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = user.isPrivateAccount,
+                            onCheckedChange = { onTogglePrivacy() },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = SparklePink,
+                                checkedTrackColor = SparklePink.copy(alpha = 0.3f)
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -331,6 +442,53 @@ fun ProfileSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
         }
+
+        // Photo Options Dialog
+        if (showPhotoOptionsDialog) {
+            AlertDialog(
+                onDismissRequest = { showPhotoOptionsDialog = false },
+                title = { Text("Profile Photo", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        ListItem(
+                            headlineContent = { Text("Choose from Device Gallery") },
+                            supportingContent = { Text("Uses Android Photo Picker (zero broad storage permissions)") },
+                            leadingContent = { Icon(Icons.Default.PhotoLibrary, contentDescription = null, tint = SparklePurple) },
+                            modifier = Modifier.clickable {
+                                showPhotoOptionsDialog = false
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
+                        )
+                        ListItem(
+                            headlineContent = { Text("Take New Photo with Camera") },
+                            leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = null, tint = SparklePurple) },
+                            modifier = Modifier.clickable {
+                                showPhotoOptionsDialog = false
+                                onTakePhotoClick()
+                            }
+                        )
+                        if (user.avatarUrl.isNotBlank()) {
+                            ListItem(
+                                headlineContent = { Text("Remove Profile Photo", color = SparklePink) },
+                                leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = SparklePink) },
+                                modifier = Modifier.clickable {
+                                    showPhotoOptionsDialog = false
+                                    onRemoveAvatar()
+                                }
+                            )
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showPhotoOptionsDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -339,97 +497,10 @@ fun CreatePostDialog(
     onDismiss: () -> Unit,
     onSubmit: (String, PostCategory, Boolean) -> Unit
 ) {
-    var content by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf(PostCategory.CAMPUS_LIFE) }
-    var isAnonymous by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Create Campus Post",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-            )
-        },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = content,
-                    onValueChange = { content = it },
-                    placeholder = { Text("What's on your mind? Share opportunities, questions, or ideas...") },
-                    minLines = 4,
-                    maxLines = 6,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("create_post_content_input")
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Anonymous Mode Toggle
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isAnonymous) SparklePink.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = if (isAnonymous) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = null,
-                            tint = if (isAnonymous) SparklePink else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Post Anonymously",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                            Text(
-                                text = "Hides your name & avatar from fellow students",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 10.sp
-                                )
-                            )
-                        }
-                        Switch(
-                            checked = isAnonymous,
-                            onCheckedChange = { isAnonymous = it },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = SparklePink,
-                                checkedTrackColor = SparklePink.copy(alpha = 0.3f)
-                            ),
-                            modifier = Modifier.testTag("anonymous_toggle_switch")
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (content.isNotBlank()) {
-                        onSubmit(content, selectedCategory, isAnonymous)
-                    }
-                },
-                enabled = content.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = SparklePurple),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.testTag("confirm_create_post_button")
-            ) {
-                Text("Publish Post")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+    com.example.ui.components.EnhancedCreatePostDialog(
+        onDismiss = onDismiss,
+        onSubmit = { content, category, isAnon, _, _, _ ->
+            onSubmit(content, category, isAnon)
         }
     )
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSparkle } from '../../context/SparkleContext';
 import {
   X,
@@ -9,7 +9,9 @@ import {
   LogOut,
   Sparkles,
   Mail,
+  Camera,
 } from 'lucide-react';
+import { AvatarEditModal } from './AvatarEditModal';
 
 export const ProfileModal: React.FC = () => {
   const {
@@ -19,36 +21,53 @@ export const ProfileModal: React.FC = () => {
     signOut,
   } = useSparkle();
 
+  const [isAvatarEditOpen, setIsAvatarEditOpen] = useState(false);
+
   if (!isProfileModalOpen || !currentUser) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-white dark:bg-sparkle-darkSurface rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
-        
-        {/* Cover & Avatar */}
-        <div className="h-28 bg-gradient-to-r from-sparkle-purple via-indigo-600 to-sparkle-pink relative">
-          <button
-            onClick={() => setIsProfileModalOpen(false)}
-            className="absolute top-4 right-4 p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+        <div className="relative w-full max-w-lg bg-white dark:bg-sparkle-darkSurface rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+          
+          {/* Cover & Avatar */}
+          <div className="h-28 bg-gradient-to-r from-sparkle-purple via-indigo-600 to-sparkle-pink relative">
+            <button
+              onClick={() => setIsProfileModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white transition-colors"
+              aria-label="Close Profile"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-        <div className="px-6 pb-6 pt-0 relative">
-          <div className="flex justify-between items-end -mt-12 mb-4">
-            <div className="relative">
-              <img
-                src={currentUser.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(currentUser.displayName)}`}
-                alt={currentUser.displayName}
-                className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-800 shadow-md bg-slate-100 object-cover"
-              />
-              {currentUser.isVerifiedStudent && (
-                <div className="absolute -bottom-1 -right-1 p-1 bg-white dark:bg-slate-800 rounded-full shadow-xs">
-                  <ShieldCheck className="w-5 h-5 text-emerald-500" />
+          <div className="px-6 pb-6 pt-0 relative">
+            <div className="flex justify-between items-end -mt-12 mb-4">
+              <div className="relative group cursor-pointer" onClick={() => setIsAvatarEditOpen(true)}>
+                <img
+                  src={currentUser.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(currentUser.displayName)}`}
+                  alt={currentUser.displayName}
+                  className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-800 shadow-md bg-slate-100 object-cover group-hover:opacity-90 transition-opacity"
+                />
+                <div className="absolute inset-0 rounded-2xl bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                  <Camera className="w-6 h-6" />
                 </div>
-              )}
-            </div>
+                {currentUser.isVerifiedStudent && (
+                  <div className="absolute -bottom-1 -right-1 p-1 bg-white dark:bg-slate-800 rounded-full shadow-xs">
+                    <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAvatarEditOpen(true)}
+                  className="px-3 py-1.5 rounded-xl border border-sparkle-purple/40 text-sparkle-purple hover:bg-sparkle-purple/10 font-bold text-xs flex items-center gap-1.5 transition-all"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Change Photo</span>
+                </button>
 
             <button
               onClick={() => {
@@ -140,5 +159,11 @@ export const ProfileModal: React.FC = () => {
         </div>
       </div>
     </div>
+
+    <AvatarEditModal
+      isOpen={isAvatarEditOpen}
+      onClose={() => setIsAvatarEditOpen(false)}
+    />
+  </>
   );
 };

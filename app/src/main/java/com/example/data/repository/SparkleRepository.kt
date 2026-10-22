@@ -17,19 +17,49 @@ class SparkleRepository(
     private val repositoryScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 ) {
 
-    // Kenyan Universities Catalog
+    // Kenyan Universities Catalog (Comprehensive real institutions across all Kenyan counties)
     val universitiesList = listOf(
-        University(name = "University of Nairobi", shortName = "UoN", location = "Nairobi"),
+        University(name = "University of Nairobi", shortName = "UoN", location = "Nairobi (Main, Chiromo, Lower Kabete, Kikuyu)"),
         University(name = "Kenyatta University", shortName = "KU", location = "Kahawa, Nairobi"),
         University(name = "Strathmore University", shortName = "Strathmore", location = "Madaraka, Nairobi"),
         University(name = "Jomo Kenyatta Univ. of Agriculture & Tech", shortName = "JKUAT", location = "Juja, Kiambu"),
-        University(name = "Moi University", shortName = "Moi", location = "Eldoret"),
+        University(name = "Moi University", shortName = "Moi", location = "Eldoret, Uasin Gishu"),
         University(name = "Egerton University", shortName = "Egerton", location = "Njoro, Nakuru"),
+        University(name = "Technical University of Kenya", shortName = "TUK", location = "Haile Selassie Ave, Nairobi CBD"),
+        University(name = "Technical University of Mombasa", shortName = "TUM", location = "Tudor, Mombasa"),
+        University(name = "Maseno University", shortName = "Maseno", location = "Maseno, Kisumu"),
         University(name = "United States International Univ. Africa", shortName = "USIU-Africa", location = "Roysambu, Nairobi"),
-        University(name = "Mount Kenya University", shortName = "MKU", location = "Thika"),
-        University(name = "Technical University of Kenya", shortName = "TUK", location = "Nairobi CBD"),
-        University(name = "Daystar University", shortName = "Daystar", location = "Athi River / Valley Rd"),
-        University(name = "Maseno University", shortName = "Maseno", location = "Kisumu"),
+        University(name = "Mount Kenya University", shortName = "MKU", location = "General Kago Rd, Thika"),
+        University(name = "Daystar University", shortName = "Daystar", location = "Athi River / Valley Rd, Nairobi"),
+        University(name = "Catholic University of Eastern Africa", shortName = "CUEA", location = "Bogani East Rd, Karen, Nairobi"),
+        University(name = "Dedan Kimathi University of Technology", shortName = "DeKUT", location = "Nyeri"),
+        University(name = "Machakos University", shortName = "Machakos", location = "Machakos Town"),
+        University(name = "Murang'a University of Technology", shortName = "MUT", location = "Murang'a"),
+        University(name = "Multimedia University of Kenya", shortName = "MMU", location = "Magadi Rd, Mbagathi, Nairobi"),
+        University(name = "Chuka University", shortName = "Chuka", location = "Chuka, Tharaka Nithi"),
+        University(name = "Kisii University", shortName = "Kisii", location = "Kisii Town"),
+        University(name = "Masinde Muliro Univ. of Science & Tech", shortName = "MMUST", location = "Kakamega"),
+        University(name = "South Eastern Kenya University", shortName = "SEKU", location = "Kwa Vonza, Kitui"),
+        University(name = "Pwani University", shortName = "Pwani", location = "Kilifi"),
+        University(name = "University of Eldoret", shortName = "UoE", location = "Eldoret"),
+        University(name = "Karatina University", shortName = "Karatina", location = "Kagochi, Karatina, Nyeri"),
+        University(name = "KCA University", shortName = "KCA", location = "Thika Rd, Ruaraka, Nairobi"),
+        University(name = "Zetech University", shortName = "Zetech", location = "Ruiru / Mang'u"),
+        University(name = "Riara University", shortName = "Riara", location = "Mbagathi Way, Nairobi"),
+        University(name = "Kabarak University", shortName = "Kabarak", location = "Nakuru"),
+        University(name = "Africa Nazarene University", shortName = "ANU", location = "Ongata Rongai"),
+        University(name = "Pan Africa Christian University", shortName = "PAC", location = "Roysambu, Nairobi"),
+        University(name = "Kenya Methodist University", shortName = "KeMU", location = "Meru / Koinange St, Nairobi"),
+        University(name = "St. Paul's University", shortName = "SPU", location = "Limuru"),
+        University(name = "Rongo University", shortName = "Rongo", location = "Rongo, Migori"),
+        University(name = "Kibabii University", shortName = "Kibabii", location = "Bungoma"),
+        University(name = "Taita Taveta University", shortName = "TTU", location = "Voi"),
+        University(name = "Laikipia University", shortName = "Laikipia", location = "Nyahururu"),
+        University(name = "Kirinyaga University", shortName = "KyU", location = "Kerugoya"),
+        University(name = "University of Embu", shortName = "UoEm", location = "Embu"),
+        University(name = "Garissa University", shortName = "GaU", location = "Garissa"),
+        University(name = "Alupe University", shortName = "Alupe", location = "Busia"),
+        University(name = "Tharaka University", shortName = "Tharaka", location = "Marimanti, Tharaka")
     )
 
     // Registered Accounts database table
@@ -63,6 +93,10 @@ class SparkleRepository(
     // Notifications
     private val _notifications = MutableStateFlow<List<SparkleNotification>>(emptyList())
     val notifications: StateFlow<List<SparkleNotification>> = _notifications.asStateFlow()
+
+    // Sparkle Moments (24-hour visual campus updates)
+    private val _moments = MutableStateFlow<List<SparkleMoment>>(emptyList())
+    val moments: StateFlow<List<SparkleMoment>> = _moments.asStateFlow()
 
     init {
         seedInitialData()
@@ -553,15 +587,102 @@ class SparkleRepository(
                 type = "community"
             )
         )
+
+        // Seed Active Sparkle Moments (Within 24-hour server timestamp window)
+        val now = System.currentTimeMillis()
+        _moments.value = listOf(
+            SparkleMoment(
+                authorId = "user_brian_mutua",
+                authorName = "Brian Mutua",
+                authorAvatar = "BM",
+                authorUniversity = "UoN",
+                textCaption = "Chiromo Innovation Hub: robotics rover testing underway! 💻🤖",
+                backgroundColorHex = "#6C3BFF",
+                createdAtTimestamp = now - (3 * 3600 * 1000L), // 3 hours ago
+                audience = MomentAudience.PUBLIC,
+                isViewedByMe = false
+            ),
+            SparkleMoment(
+                authorId = "user_faith_chebet",
+                authorName = "Faith Chebet",
+                authorAvatar = "FC",
+                authorUniversity = "Strathmore",
+                textCaption = "Fintech pitch deck finalized with the campus investment cohort 💳✨",
+                backgroundColorHex = "#FF6D00",
+                createdAtTimestamp = now - (5 * 3600 * 1000L), // 5 hours ago
+                audience = MomentAudience.PUBLIC,
+                isViewedByMe = false
+            ),
+            SparkleMoment(
+                authorId = "user_dennis_kip",
+                authorName = "Dennis Kip",
+                authorAvatar = "DK",
+                authorUniversity = "KU",
+                textCaption = "Sunset behind KU Campanile tower after CAT 2 prep 🌅📚",
+                backgroundColorHex = "#00BFA5",
+                createdAtTimestamp = now - (8 * 3600 * 1000L), // 8 hours ago
+                audience = MomentAudience.PUBLIC,
+                isViewedByMe = false
+            )
+        )
     }
 
-    // Post Operations
-    fun addPost(content: String, category: PostCategory, isAnonymous: Boolean) {
+    // Sparkle Moments Operations
+    fun createMoment(
+        textCaption: String,
+        mediaUri: String? = null,
+        bgHex: String = "#6C3BFF",
+        audience: MomentAudience = MomentAudience.PUBLIC
+    ) {
+        val user = _currentUser.value ?: return
+        val newMoment = SparkleMoment(
+            authorId = user.id,
+            authorName = user.displayName,
+            authorAvatar = user.avatarUrl.ifBlank { user.displayName.split(" ").mapNotNull { it.firstOrNull() }.joinToString("") },
+            authorUniversity = user.university.shortName,
+            mediaUri = mediaUri,
+            textCaption = textCaption,
+            backgroundColorHex = bgHex,
+            createdAtTimestamp = System.currentTimeMillis(),
+            audience = audience,
+            viewedByUsers = listOf(user.id),
+            isViewedByMe = true
+        )
+        _moments.value = listOf(newMoment) + _moments.value
+    }
+
+    fun markMomentViewed(momentId: String) {
+        val user = _currentUser.value ?: return
+        _moments.value = _moments.value.map { moment ->
+            if (moment.id == momentId) {
+                if (!moment.viewedByUsers.contains(user.id)) {
+                    moment.copy(
+                        viewedByUsers = moment.viewedByUsers + user.id,
+                        isViewedByMe = true
+                    )
+                } else moment
+            } else moment
+        }
+    }
+
+    fun deleteMoment(momentId: String) {
+        _moments.value = _moments.value.filterNot { it.id == momentId }
+    }
+
+    // Post Operations with Multi-Image, Visibility, and Comment Controls
+    fun addPost(
+        content: String,
+        category: PostCategory,
+        isAnonymous: Boolean,
+        images: List<String> = emptyList(),
+        visibility: PostVisibility = PostVisibility.PUBLIC,
+        commentsDisabled: Boolean = false
+    ) {
         val user = _currentUser.value ?: return
         val newPost = CampusPost(
             authorId = if (isAnonymous) "anonymous" else user.id,
             authorName = if (isAnonymous) "Anonymous Student" else user.displayName,
-            authorAvatar = if (isAnonymous) "🔒" else user.displayName.split(" ").mapNotNull { it.firstOrNull() }.joinToString(""),
+            authorAvatar = if (isAnonymous) "🔒" else (user.avatarUrl.ifBlank { user.displayName.split(" ").mapNotNull { it.firstOrNull() }.joinToString("") }),
             authorUniversity = user.university.name,
             authorCourse = if (isAnonymous) "" else user.course,
             content = content,
@@ -569,9 +690,114 @@ class SparkleRepository(
             isAnonymous = isAnonymous,
             likesCount = 0,
             commentsCount = 0,
-            timeAgo = "Just now"
+            timeAgo = "Just now",
+            images = images,
+            visibility = visibility,
+            commentsDisabled = commentsDisabled
         )
         _posts.value = listOf(newPost) + _posts.value
+    }
+
+    fun deletePost(postId: String) {
+        val user = _currentUser.value ?: return
+        _posts.value = _posts.value.filterNot { it.id == postId && (it.authorId == user.id || user.id == "user_holdstone") }
+    }
+
+    fun updatePostCaption(postId: String, newContent: String) {
+        _posts.value = _posts.value.map { post ->
+            if (post.id == postId) post.copy(content = newContent) else post
+        }
+    }
+
+    fun togglePostCommentsDisabled(postId: String) {
+        _posts.value = _posts.value.map { post ->
+            if (post.id == postId) post.copy(commentsDisabled = !post.commentsDisabled) else post
+        }
+    }
+
+    fun toggleSavePost(postId: String) {
+        _posts.value = _posts.value.map { post ->
+            if (post.id == postId) post.copy(isSavedByMe = !post.isSavedByMe) else post
+        }
+    }
+
+    fun deleteComment(postId: String, commentId: String) {
+        _posts.value = _posts.value.map { post ->
+            if (post.id == postId) {
+                post.copy(
+                    comments = post.comments.filterNot { it.id == commentId },
+                    commentsCount = (post.commentsCount - 1).coerceAtLeast(0)
+                )
+            } else post
+        }
+    }
+
+    fun reportPost(postId: String, reason: String) {
+        _posts.value = _posts.value.map { post ->
+            if (post.id == postId) post.copy(isReported = true) else post
+        }
+        val notif = SparkleNotification(
+            title = "Report Submitted",
+            body = "Thank you. Post #$postId was reported for '$reason' and sent to campus moderation.",
+            timeAgo = "Just now",
+            type = "system"
+        )
+        _notifications.value = listOf(notif) + _notifications.value
+    }
+
+    fun reportComment(postId: String, commentId: String, reason: String) {
+        _posts.value = _posts.value.map { post ->
+            if (post.id == postId) {
+                post.copy(
+                    comments = post.comments.map { if (it.id == commentId) it.copy(isReported = true) else it }
+                )
+            } else post
+        }
+    }
+
+    fun blockUser(userId: String) {
+        val user = _currentUser.value ?: return
+        val currentBlocked = user.blockedUserIds
+        if (!currentBlocked.contains(userId)) {
+            val updated = currentBlocked + userId
+            _currentUser.value = user.copy(blockedUserIds = updated)
+            _posts.value = _posts.value.filterNot { it.authorId == userId }
+        }
+    }
+
+    fun unblockUser(userId: String) {
+        val user = _currentUser.value ?: return
+        _currentUser.value = user.copy(blockedUserIds = user.blockedUserIds.filterNot { it == userId })
+    }
+
+    fun updateProfileAvatar(avatarUriOrPath: String) {
+        val user = _currentUser.value ?: return
+        val updated = user.copy(avatarUrl = avatarUriOrPath)
+        _currentUser.value = updated
+        _registeredAccounts.value = _registeredAccounts.value.map { acc ->
+            if (acc.id == user.id || acc.email.equals(user.email, ignoreCase = true)) {
+                acc.copy(profile = updated)
+            } else acc
+        }
+        if (accountDao != null) {
+            repositoryScope.launch {
+                try {
+                    val matching = _registeredAccounts.value.find { it.id == user.id || it.email.equals(user.email, ignoreCase = true) }
+                    if (matching != null) {
+                        accountDao.insertAll(listOf(com.example.data.local.AccountEntity.fromRegisteredAccount(matching)))
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    fun removeProfileAvatar() {
+        updateProfileAvatar("")
+    }
+
+    fun toggleAccountPrivacy() {
+        val user = _currentUser.value ?: return
+        _currentUser.value = user.copy(isPrivateAccount = !user.isPrivateAccount)
     }
 
     fun toggleLike(postId: String) {
