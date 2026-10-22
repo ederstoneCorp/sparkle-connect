@@ -69,8 +69,7 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const handleGmailSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGmailSignIn = async () => {
     setError(null);
     setIsLoading(true);
     const res = await signInWithGmail('', '');
@@ -359,7 +358,7 @@ export const AuthModal: React.FC = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={(event) => { void handleGmailSignIn(event); }}
+                      onClick={() => { void handleGmailSignIn(); }}
                       disabled={isLoading}
                       className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#7545FF] via-indigo-600 to-[#FF7043] hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-[#7545FF]/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                     >
