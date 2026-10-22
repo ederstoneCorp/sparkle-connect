@@ -13,6 +13,7 @@ import {
   PostVisibility,
   ChatMessage,
   GigApplication,
+  SparkleMoment,
 } from '../types/models';
 import {
   UNIVERSITIES,
@@ -35,6 +36,7 @@ interface SparkleState {
   events: CampusEvent[];
   conversations: Conversation[];
   notifications: SparkleNotification[];
+  moments: SparkleMoment[];
   selectedUniversityId: string; // 'ALL' or university ID
   activeTab: 'feed' | 'gigs' | 'communities' | 'academics' | 'events' | 'messages';
   isAuthModalOpen: boolean;
@@ -52,6 +54,9 @@ interface SparkleContextType extends SparkleState {
   setIsNotificationsOpen: (open: boolean) => void;
   signIn: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   signInWithGmail: (googleEmail: string, derivedName?: string) => Promise<{ success: boolean; account?: RegisteredAccount; error?: string }>;
+  addMoment: (caption: string, backgroundColorHex: string) => void;
+  markMomentViewed: (momentId: string) => void;
+  deleteMoment: (momentId: string) => void;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (data: {
@@ -117,6 +122,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           events: parsed.events || INITIAL_EVENTS,
           conversations: parsed.conversations || INITIAL_CONVERSATIONS,
           notifications: parsed.notifications || INITIAL_NOTIFICATIONS,
+          moments: (parsed.moments || []).filter((moment: SparkleMoment) => Date.now() - moment.createdAtTimestamp < 24 * 60 * 60 * 1000),
           selectedUniversityId: 'ALL',
           activeTab: 'feed',
           isAuthModalOpen: true,
@@ -139,6 +145,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       events: INITIAL_EVENTS,
       conversations: INITIAL_CONVERSATIONS,
       notifications: INITIAL_NOTIFICATIONS,
+      moments: [],
       selectedUniversityId: 'ALL',
       activeTab: 'feed',
       isAuthModalOpen: true,
@@ -158,6 +165,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         events: state.events,
         conversations: state.conversations,
         notifications: state.notifications,
+        moments: state.moments.filter((moment) => Date.now() - moment.createdAtTimestamp < 24 * 60 * 60 * 1000),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     } catch (e) {
@@ -173,7 +181,52 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     state.events,
     state.conversations,
     state.notifications,
+    state.moments,
   ]);
+
+  const addMoment = (caption: string, backgroundColorHex: string) => {
+    if (!state.currentUser || !caption.trim()) return;
+    const now = Date.now();
+    const moment: SparkleMoment = {
+      id: `moment_${now}`,
+      authorId: state.currentUser.id,
+      authorName: state.currentUser.displayName,
+      authorAvatar: state.currentUser.avatarUrl,
+      authorUniversity: state.currentUser.university.shortName,
+      textCaption: caption.trim().slice(0, 240),
+      backgroundColorHex,
+      createdAtTimestamp: now,
+      audience: 'PUBLIC',
+      viewedByUsers: [],
+      isViewedByMe: false,
+    };
+    setState((prev) => ({
+      ...prev,
+      moments: [moment, ...prev.moments.filter((item) => now - item.createdAtTimestamp < 24 * 60 * 60 * 1000)],
+    }));
+  };
+
+  const markMomentViewed = (momentId: string) => {
+    if (!state.currentUser) return;
+    setState((prev) => ({
+      ...prev,
+      moments: prev.moments.map((moment) => moment.id !== momentId ? moment : {
+        ...moment,
+        isViewedByMe: true,
+        viewedByUsers: moment.viewedByUsers.includes(state.currentUser!.id)
+          ? moment.viewedByUsers
+          : [...moment.viewedByUsers, state.currentUser!.id],
+      }),
+    }));
+  };
+
+  const deleteMoment = (momentId: string) => {
+    if (!state.currentUser) return;
+    setState((prev) => ({
+      ...prev,
+      moments: prev.moments.filter((moment) => !(moment.id === momentId && moment.authorId === state.currentUser!.id)),
+    }));
+  };
 
   const setSelectedUniversityId = (id: string) => {
     setState((prev) => ({ ...prev, selectedUniversityId: id }));
@@ -854,6 +907,9 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         signInWithGmail,
         resetPassword,
         updatePassword,
+        addMoment,
+        markMomentViewed,
+        deleteMoment,
         signUp,
         signOut,
         switchAccount,
