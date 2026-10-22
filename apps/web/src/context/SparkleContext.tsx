@@ -371,6 +371,9 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         (payload) => {
           if (payload.new) {
             const p = payload.new as any;
+            // The creator adds the fully hydrated post after the insert returns; avoid a race
+            // where Realtime inserts a placeholder first and prevents that richer local entry.
+            if (p.author_id === state.currentUser?.id) return;
             const newPost: CampusPost = {
               id: p.id || `post_${Date.now()}`,
               authorId: p.author_id || 'peer',
