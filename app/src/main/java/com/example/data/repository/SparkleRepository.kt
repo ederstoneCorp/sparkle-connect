@@ -98,6 +98,10 @@ class SparkleRepository(
     private val _moments = MutableStateFlow<List<SparkleMoment>>(emptyList())
     val moments: StateFlow<List<SparkleMoment>> = _moments.asStateFlow()
 
+    // Applied Gig Applications
+    private val _appliedGigApplications = MutableStateFlow<List<GigApplication>>(emptyList())
+    val appliedGigApplications: StateFlow<List<GigApplication>> = _appliedGigApplications.asStateFlow()
+
     init {
         seedInitialData()
         loadAccountsFromDatabase()
@@ -839,6 +843,18 @@ class SparkleRepository(
     }
 
     fun applyForGig(gigId: String, coverNote: String, portfolioLink: String, phone: String) {
+        val user = _currentUser.value
+        val newApp = GigApplication(
+            gigId = gigId,
+            applicantName = user?.displayName ?: "Student",
+            applicantUniversity = user?.university?.name ?: "University",
+            coverNote = coverNote,
+            portfolioLink = portfolioLink,
+            phone = phone,
+            status = "Submitted",
+            submittedAt = "Just now"
+        )
+        _appliedGigApplications.value = listOf(newApp) + _appliedGigApplications.value
         _gigs.value = _gigs.value.map { gig ->
             if (gig.id == gigId) {
                 gig.copy(hasApplied = true, applicationsCount = gig.applicationsCount + 1)

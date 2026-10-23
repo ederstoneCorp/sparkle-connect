@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -412,15 +413,16 @@ fun ChatBubble(message: ChatMessage) {
     ) {
         Surface(
             shape = bubbleShape,
-            color = if (isMe) Color(0xFF6C3BFF) else Color(0xFFFFFFFF),
-            shadowElevation = 2.dp,
+            color = if (isMe) SparklePurple else MaterialTheme.colorScheme.surface,
+            shadowElevation = 1.dp,
+            border = if (!isMe) BorderStroke(1.dp, SparkleBorder.copy(alpha = 0.5f)) else null,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) {
                 Text(
                     text = message.text,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = if (isMe) Color.White else Color(0xFF1C1B1F),
+                        color = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface,
                         lineHeight = 20.sp
                     )
                 )

@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/ic_sparkle_logo_1792419027695"
+        android:drawable="@drawable/sparkle_app_icon_1792768243913"
         android:gravity="center" />
 </layer-list>

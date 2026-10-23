@@ -38,14 +38,14 @@ fun EventsScreen(
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = SparkleMint),
+                colors = CardDefaults.cardColors(containerColor = SparkleMaroon),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
                         text = "Campus Events & Summits 🎪",
                         style = MaterialTheme.typography.titleMedium.copy(
-                            color = Color(0xFF003825),
+                            color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                     )
@@ -53,7 +53,7 @@ fun EventsScreen(
                     Text(
                         text = "Hackathons, career expos, workshops, and student festivals happening across Kenya.",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF004D34),
+                            color = Color.White.copy(alpha = 0.9f),
                             lineHeight = 18.sp
                         )
                     )

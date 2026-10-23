@@ -95,173 +95,131 @@ fun SparkleMomentsSection(
         Spacer(modifier = Modifier.height(8.dp))
 
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(horizontal = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.testTag("sparkle_moments_row")
         ) {
-            // "Add Moment" Action Card
+            // "Your Story" / Add Moment (Instagram Circular Style)
             item {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.5.dp, SparklePurple.copy(alpha = 0.4f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .width(105.dp)
-                        .height(150.dp)
                         .clickable { onCreateMomentClick() }
                         .testTag("add_sparkle_moment_card")
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Column(
+                    Box(
+                        modifier = Modifier.size(72.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // User Avatar
+                        Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(SparklePrimaryGradient),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(CircleShape)
-                                    .background(SparklePrimaryGradient),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Add Sparkle Moment",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(26.dp)
+                            Text(
+                                text = currentUser?.displayName?.split(" ")?.mapNotNull { it.firstOrNull() }?.take(2)?.joinToString("") ?: "+",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
                                 )
-                            }
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text = "Add Moment",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                textAlign = TextAlign.Center
                             )
-                            Text(
-                                text = "24-hr clip",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = SparklePurple,
-                                    fontSize = 10.sp
-                                ),
-                                textAlign = TextAlign.Center
+                        }
+
+                        // Blue plus badge at bottom end
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .offset(x = 2.dp, y = 2.dp)
+                                .size(24.dp)
+                                .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                                .clip(CircleShape)
+                                .background(SparkleBlue),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Story",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Your Story",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        maxLines = 1
+                    )
                 }
             }
 
-            // Active Sparkle Moments Cards
+            // Active Campus Moments (Instagram Circular Stories with Purple-Maroon-Blue gradient ring)
             items(moments, key = { it.id }) { moment ->
-                val isMyMoment = currentUser != null && moment.authorId == currentUser.id
-                val ringGradient = if (!moment.isViewedByMe) {
-                    Brush.sweepGradient(listOf(SparklePurple, SparklePink, SparkleOrange, SparklePurple))
+                val ringBrush = if (!moment.isViewedByMe) {
+                    SparkleStoryRingGradient
                 } else {
-                    Brush.sweepGradient(listOf(SparkleBorder, SparkleBorder))
+                    androidx.compose.ui.graphics.SolidColor(SparkleBorder)
                 }
 
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                    border = BorderStroke(
-                        width = if (!moment.isViewedByMe) 2.dp else 1.dp,
-                        brush = ringGradient
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .width(105.dp)
-                        .height(150.dp)
                         .clickable { onMomentClick(moment) }
                         .testTag("moment_item_${moment.id}")
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
+                            .size(72.dp)
+                            .border(2.5.dp, ringBrush, CircleShape)
+                            .padding(4.dp)
+                            .clip(CircleShape)
                             .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color(android.graphics.Color.parseColor(moment.backgroundColorHex.ifBlank { "#6C3BFF" })),
-                                        SparkleDarkSurface.copy(alpha = 0.85f)
-                                    )
+                                Color(
+                                    try {
+                                        android.graphics.Color.parseColor(moment.backgroundColorHex.ifBlank { "#6B21A8" })
+                                    } catch (_: Exception) {
+                                        0xFF6B21A8.toInt()
+                                    }
                                 )
-                            )
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
                         if (!moment.mediaUri.isNullOrBlank()) {
                             AsyncImage(
                                 model = moment.mediaUri,
-                                contentDescription = null,
+                                contentDescription = moment.textCaption,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Black.copy(alpha = 0.35f))
-                            )
-                        }
-
-                        // Top Row: Avatar with gradient indicator ring
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .border(2.dp, ringGradient, CircleShape)
-                                    .padding(2.dp)
-                                    .clip(CircleShape)
-                                    .background(SparklePurple),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = moment.authorAvatar.take(2),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                )
-                            }
-                        }
-
-                        // Bottom Row: Caption & Author name
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .fillMaxWidth()
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))
-                                    )
-                                )
-                                .padding(8.dp)
-                        ) {
+                        } else {
                             Text(
-                                text = if (isMyMoment) "Your Moment" else moment.authorName,
-                                style = MaterialTheme.typography.labelSmall.copy(
+                                text = moment.authorAvatar.take(2),
+                                style = MaterialTheme.typography.titleMedium.copy(
                                     color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = moment.textCaption,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = Color.White.copy(alpha = 0.85f),
-                                    fontSize = 9.sp
-                                ),
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
+                                    fontWeight = FontWeight.Bold
+                                )
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = moment.authorName.split(" ").firstOrNull() ?: moment.authorName,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = if (!moment.isViewedByMe) FontWeight.Bold else FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }

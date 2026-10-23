@@ -17,11 +17,14 @@ enum class SparkleTab(val label: String) {
     MESSAGES("Messages")
 }
 
+enum class GigViewTab { EXPLORE, APPLIED }
+
 data class SparkleUiState(
     val selectedTab: SparkleTab = SparkleTab.FEED,
     val selectedUniversityFilter: String? = null, // null means All Universities
     val selectedCategory: PostCategory = PostCategory.ALL,
     val selectedGigCategory: String = "All",
+    val selectedGigViewTab: GigViewTab = GigViewTab.EXPLORE,
     val searchQuery: String = "",
     val isSearchActive: Boolean = false,
     val showCreatePostDialog: Boolean = false,
@@ -63,6 +66,7 @@ class SparkleViewModel(
     val notifications = repository.notifications
     val universities = repository.universitiesList
     val moments = repository.moments
+    val appliedGigApplications = repository.appliedGigApplications
 
     // Sparkle Moments active within 24 hours
     val activeMoments: StateFlow<List<SparkleMoment>> = repository.moments.map { list ->
@@ -118,6 +122,10 @@ class SparkleViewModel(
 
     fun setGigCategory(category: String) {
         _uiState.update { it.copy(selectedGigCategory = category) }
+    }
+
+    fun setGigViewTab(tab: GigViewTab) {
+        _uiState.update { it.copy(selectedGigViewTab = tab) }
     }
 
     fun setUniversityFilter(uniShortName: String?) {

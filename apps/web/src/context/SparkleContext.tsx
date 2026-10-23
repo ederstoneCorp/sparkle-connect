@@ -32,6 +32,7 @@ interface SparkleState {
   currentAccountId: string | null;
   posts: CampusPost[];
   gigs: Gig[];
+  gigApplications: GigApplication[];
   communities: Community[];
   events: CampusEvent[];
   conversations: Conversation[];
@@ -136,6 +137,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           currentAccountId: null,
           posts: parsed.posts || INITIAL_POSTS,
           gigs: parsed.gigs || INITIAL_GIGS,
+          gigApplications: parsed.gigApplications || [],
           communities: parsed.communities || INITIAL_COMMUNITIES,
           events: parsed.events || INITIAL_EVENTS,
           conversations: parsed.conversations || INITIAL_CONVERSATIONS,
@@ -159,6 +161,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currentAccountId: null,
       posts: INITIAL_POSTS,
       gigs: INITIAL_GIGS,
+      gigApplications: [],
       communities: INITIAL_COMMUNITIES,
       events: INITIAL_EVENTS,
       conversations: INITIAL_CONVERSATIONS,
@@ -179,6 +182,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const dataToSave = {
         posts: state.posts,
         gigs: state.gigs,
+        gigApplications: state.gigApplications,
         communities: state.communities,
         events: state.events,
         conversations: state.conversations,
@@ -195,6 +199,7 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     state.currentAccountId,
     state.posts,
     state.gigs,
+    state.gigApplications,
     state.communities,
     state.events,
     state.conversations,
@@ -1020,8 +1025,21 @@ export const SparkleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
+    const newApp: GigApplication = {
+      id: `app_${Date.now()}`,
+      gigId,
+      applicantName: state.currentUser.displayName,
+      applicantUniversity: state.currentUser.university.shortName,
+      coverNote,
+      portfolioLink: portfolioUrl,
+      phone,
+      status: 'Submitted',
+      submittedAt: 'Just now',
+    };
+
     setState((prev) => ({
       ...prev,
+      gigApplications: [newApp, ...(prev.gigApplications || [])],
       gigs: prev.gigs.map((gig) => {
         if (gig.id === gigId) {
           return {

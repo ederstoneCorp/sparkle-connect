@@ -368,12 +368,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, categoryColorClass }) 
             onClick={handleLike}
             className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${
               post.isLiked || post.isLikedByMe
-                ? 'text-rose-600'
-                : 'text-slate-500 dark:text-slate-400 hover:text-rose-600'
+                ? 'text-[#831843]'
+                : 'text-slate-500 dark:text-slate-400 hover:text-[#831843]'
             }`}
           >
             <Heart
-              className={`w-4 h-4 ${post.isLiked || post.isLikedByMe ? 'fill-rose-600' : ''}`}
+              className={`w-4 h-4 ${post.isLiked || post.isLikedByMe ? 'fill-[#831843]' : ''}`}
             />
             <span>{post.likesCount}</span>
           </button>
@@ -410,6 +410,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, categoryColorClass }) 
           <span>{isCopied ? 'Link Copied!' : 'Share'}</span>
         </button>
       </div>
+
+      {/* Instagram-style Likes summary */}
+      {post.likesCount > 0 && (
+        <p className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-2 mb-1">
+          {post.likesCount === 1 ? '1 like' : `${post.likesCount} likes`}
+        </p>
+      )}
 
       {/* Expanded Comments Section */}
       {isCommentsOpen && (

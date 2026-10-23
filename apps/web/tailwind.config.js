@@ -11,30 +11,38 @@ export default {
     extend: {
       colors: {
         sparkle: {
-          purple: '#6C3BFF',
-          'purple-dark': '#5022D9',
-          'purple-light': '#9B6FFF',
-          orange: '#FF6B35',
-          pink: '#F43F8C',
-          blue: '#2878FF',
-          mint: '#28D7A0',
-          yellow: '#FFD447',
-          lightBg: '#F7F7FC',
+          // Revamped Purple, Maroon, and Blue palette
+          purple: '#6B21A8',
+          'purple-dark': '#4C1D95',
+          'purple-light': '#9333EA',
+          maroon: '#831843',
+          'maroon-dark': '#500724',
+          'maroon-light': '#9F1239',
+          pink: '#831843', // Backward compatibility mapped to rich maroon
+          blue: '#1D4ED8',
+          'blue-dark': '#1E3A8A',
+          'blue-light': '#2563EB',
+          mint: '#10B981',
+          orange: '#EA580C',
+          yellow: '#F59E0B',
+          // Facebook / Instagram style feed backgrounds & cards
+          lightBg: '#F0F2F5',
           card: '#FFFFFF',
-          darkBg: '#11101B',
-          darkSurface: '#1C1A2A',
-          border: '#E9E7F2',
-          textPrimary: '#19172B',
-          textSecondary: '#77758A',
+          darkBg: '#0E0B16',
+          darkSurface: '#181324',
+          border: '#E4E6EB',
+          textPrimary: '#050505',
+          textSecondary: '#65676B',
         }
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
       },
       backgroundImage: {
-        'sparkle-gradient': 'linear-gradient(90deg, #6C3BFF 0%, #F43F8C 100%)',
-        'sparkle-accent': 'linear-gradient(90deg, #FF6B35 0%, #FFD447 100%)',
-        'sparkle-ocean': 'linear-gradient(90deg, #2878FF 0%, #28D7A0 100%)',
+        'sparkle-gradient': 'linear-gradient(135deg, #6B21A8 0%, #831843 50%, #1D4ED8 100%)',
+        'sparkle-story-ring': 'linear-gradient(45deg, #6B21A8, #831843, #1D4ED8)',
+        'sparkle-accent': 'linear-gradient(90deg, #831843 0%, #1D4ED8 100%)',
+        'sparkle-ocean': 'linear-gradient(90deg, #1D4ED8 0%, #6B21A8 100%)',
       },
       animation: {
         'slide-down': 'slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',

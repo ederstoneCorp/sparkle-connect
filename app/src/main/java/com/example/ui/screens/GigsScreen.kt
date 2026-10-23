@@ -22,7 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Gig
+import com.example.data.model.GigApplication
 import com.example.data.model.GigOpportunityType
+import com.example.ui.viewmodel.GigViewTab
 import com.example.ui.theme.*
 
 @Composable
@@ -33,6 +35,9 @@ fun GigsScreen(
     onBookmarkToggle: (String) -> Unit,
     onApplyClick: (Gig) -> Unit,
     onCreateGigClick: () -> Unit,
+    selectedViewTab: GigViewTab = GigViewTab.EXPLORE,
+    onSelectViewTab: (GigViewTab) -> Unit = {},
+    appliedApplications: List<GigApplication> = emptyList(),
     isLoading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -89,283 +94,291 @@ fun GigsScreen(
                 }
             }
 
-            // Categories Row
+            // View Tabs Row: Explore vs Applied
             item {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(vertical = 4.dp),
-                    modifier = Modifier.testTag("gigs_category_row")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(categories) { cat ->
-                        val isSelected = cat == selectedCategory
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { onSelectCategory(cat) },
-                            label = {
-                                Text(
-                                    text = cat,
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                    )
-                                )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = SparklePink,
-                                selectedLabelColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.testTag("gig_filter_$cat")
+                    FilterChip(
+                        selected = selectedViewTab == GigViewTab.EXPLORE,
+                        onClick = { onSelectViewTab(GigViewTab.EXPLORE) },
+                        label = { Text("Explore Gigs (${gigs.size})") },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = SparklePurple,
+                            selectedLabelColor = Color.White
                         )
-                    }
+                    )
+                    FilterChip(
+                        selected = selectedViewTab == GigViewTab.APPLIED,
+                        onClick = { onSelectViewTab(GigViewTab.APPLIED) },
+                        label = { Text("Applied Gigs (${appliedApplications.size}) 🎉") },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = SparklePurple,
+                            selectedLabelColor = Color.White
+                        )
+                    )
                 }
             }
 
-            // Gigs List
-            if (isLoading) {
-                items(3) {
-                    com.example.ui.components.GigShimmerItem()
-                }
-            } else if (gigs.isEmpty()) {
+            if (selectedViewTab == GigViewTab.EXPLORE) {
+                // Categories Row
                 item {
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 20.dp)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 4.dp),
+                        modifier = Modifier.testTag("gigs_category_row")
                     ) {
-                        Column(
+                        items(categories) { cat ->
+                            val isSelected = cat == selectedCategory
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onSelectCategory(cat) },
+                                label = {
+                                    Text(
+                                        text = cat,
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = SparklePink,
+                                    selectedLabelColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(20.dp),
+                                modifier = Modifier.testTag("gig_filter_$cat")
+                            )
+                        }
+                    }
+                }
+
+                // Gigs List
+                if (isLoading) {
+                    items(3) {
+                        com.example.ui.components.GigShimmerItem()
+                    }
+                } else if (gigs.isEmpty()) {
+                    item {
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .padding(top = 20.dp)
                         ) {
-                            Icon(Icons.Outlined.WorkOutline, contentDescription = null, tint = SparklePurple, modifier = Modifier.size(44.dp))
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text = "No gigs found for this category",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Have a project you need help with? Post an opportunity!",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            )
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Button(
-                                onClick = onCreateGigClick,
-                                colors = ButtonDefaults.buttonColors(containerColor = SparklePink),
-                                shape = RoundedCornerShape(12.dp)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Post a Gig")
+                                Icon(Icons.Outlined.WorkOutline, contentDescription = null, tint = SparklePurple, modifier = Modifier.size(44.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "No gigs found for this category",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Have a project you need help with? Post an opportunity!",
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Button(
+                                    onClick = onCreateGigClick,
+                                    colors = ButtonDefaults.buttonColors(containerColor = SparklePink),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Post a Gig")
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    items(gigs, key = { it.id }) { gig ->
+                        GigCardItem(
+                            gig = gig,
+                            onBookmarkToggle = { onBookmarkToggle(gig.id) },
+                            onApplyClick = { onApplyClick(gig) }
+                        )
+                    }
+                }
+            } else {
+                // Applied Gigs Section
+                if (appliedApplications.isEmpty()) {
+                    item {
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 20.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Outlined.Description, contentDescription = null, tint = SparklePurple, modifier = Modifier.size(44.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "No Gig Applications Yet",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Explore open campus gigs and send your pitch to start earning KES.",
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Button(
+                                    onClick = { onSelectViewTab(GigViewTab.EXPLORE) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SparklePurple),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Explore Gigs")
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    items(appliedApplications, key = { it.id }) { app ->
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = SparkleMint.copy(alpha = 0.2f)
+                                    ) {
+                                        Text(
+                                            text = "● Status: ${app.status}",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color(0xFF047857),
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text(
+                                        text = app.submittedAt,
+                                        style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Pitch Note:",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                                Text(
+                                    text = "\"${app.coverNote}\"",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Phone: ${app.phone}",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
                             }
                         }
                     }
                 }
-            } else {
-                items(gigs, key = { it.id }) { gig ->
-                    GigCard(
-                        gig = gig,
-                        onBookmarkToggle = { onBookmarkToggle(gig.id) },
-                        onApplyClick = { onApplyClick(gig) }
-                    )
-                }
-            }
-        }
-
-        // Post Gig FAB
-        FloatingActionButton(
-            onClick = onCreateGigClick,
-            containerColor = SparklePink,
-            contentColor = Color.White,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 16.dp)
-                .testTag("create_gig_fab")
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Post Gig")
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Post Gig", fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
 @Composable
-fun GigCard(
+fun GigCardItem(
     gig: Gig,
     onBookmarkToggle: () -> Unit,
-    onApplyClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onApplyClick: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("gig_card_${gig.id}")
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Top row: Opportunity Type & Bookmark
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = SparkleMint.copy(alpha = 0.15f)
-                    ) {
-                        Text(
-                            text = gig.opportunityType.label,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFF007A50),
-                                fontWeight = FontWeight.Bold
-                            ),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = SparkleBlue.copy(alpha = 0.12f)
-                    ) {
-                        Text(
-                            text = gig.compensation,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = SparkleBlue,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-
-                IconButton(
-                    onClick = onBookmarkToggle,
-                    modifier = Modifier.size(36.dp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SparklePurple.copy(alpha = 0.1f)
                 ) {
+                    Text(
+                        text = gig.compensation,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            color = SparklePurple,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = onBookmarkToggle) {
                     Icon(
                         imageVector = if (gig.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                        contentDescription = "Bookmark Gig",
+                        contentDescription = "Bookmark",
                         tint = if (gig.isBookmarked) SparklePink else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Title
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = gig.title,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Description
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = gig.description,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
-                )
+                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                maxLines = 3
             )
 
             Spacer(modifier = Modifier.height(12.dp))
-
-            // Skills pills
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                gig.skillsRequired.take(3).forEach { skill ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "${gig.publisherName} • ${gig.publisherUniversity}",
+                    style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                if (gig.hasApplied) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant
+                        color = Color(0xFF10B981).copy(alpha = 0.2f)
                     ) {
-                        Text(
-                            text = skill,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-                if (gig.skillsRequired.size > 3) {
-                    Text(
-                        text = "+${gig.skillsRequired.size - 3}",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp
-                        ),
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-            Divider(color = SparkleBorder.copy(alpha = 0.5f), thickness = 0.8.dp)
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Publisher info & Apply action
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(SparkleAccentGradient),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = gig.publisherAvatar,
-                            style = MaterialTheme.typography.labelSmall.copy(color = Color.White, fontWeight = FontWeight.Bold)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = gig.publisherName,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-                        )
-                        Text(
-                            text = "${gig.publisherUniversity} • ${gig.deadline}",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 11.sp
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF047857), modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Applied",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Color(0xFF047857),
+                                    fontWeight = FontWeight.Bold
+                                )
                             )
-                        )
-                    }
-                }
-
-                // Apply button
-                if (gig.hasApplied) {
-                    OutlinedButton(
-                        onClick = {},
-                        enabled = false,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Applied ✓", style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 } else {
                     Button(
                         onClick = onApplyClick,
                         colors = ButtonDefaults.buttonColors(containerColor = SparklePurple),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.testTag("apply_gig_button_${gig.id}")
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
                     ) {
-                        Text("Apply Now", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                        Text("Apply", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
                     }
                 }
             }

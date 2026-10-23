@@ -258,6 +258,7 @@ class MainActivity : ComponentActivity() {
                                                 )
                                             }
                                             composable(Screen.Gigs.route) {
+                                                val appliedApplications by viewModel.appliedGigApplications.collectAsState()
                                                 GigsScreen(
                                                     gigs = filteredGigs,
                                                     selectedCategory = uiState.selectedGigCategory,
@@ -265,6 +266,9 @@ class MainActivity : ComponentActivity() {
                                                     onBookmarkToggle = { viewModel.toggleGigBookmark(it) },
                                                     onApplyClick = { viewModel.openApplyGig(it) },
                                                     onCreateGigClick = { viewModel.showCreateGig(true) },
+                                                    selectedViewTab = uiState.selectedGigViewTab,
+                                                    onSelectViewTab = { viewModel.setGigViewTab(it) },
+                                                    appliedApplications = appliedApplications,
                                                     isLoading = uiState.isTabContentLoading
                                                 )
                                             }
@@ -364,6 +368,7 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                         composable(Screen.Gigs.route) {
+                                            val appliedApplications by viewModel.appliedGigApplications.collectAsState()
                                             GigsScreen(
                                                 gigs = filteredGigs,
                                                 selectedCategory = uiState.selectedGigCategory,
@@ -371,6 +376,9 @@ class MainActivity : ComponentActivity() {
                                                 onBookmarkToggle = { viewModel.toggleGigBookmark(it) },
                                                 onApplyClick = { viewModel.openApplyGig(it) },
                                                 onCreateGigClick = { viewModel.showCreateGig(true) },
+                                                selectedViewTab = uiState.selectedGigViewTab,
+                                                onSelectViewTab = { viewModel.setGigViewTab(it) },
+                                                appliedApplications = appliedApplications,
                                                 isLoading = uiState.isTabContentLoading
                                             )
                                         }

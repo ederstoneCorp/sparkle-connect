@@ -172,7 +172,7 @@ fun FeedScreen(
                                 modifier = Modifier.clickable { onCreatePostClick() },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = SparklePurple, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = SparkleBlue, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("Photos & Media", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
                             }
@@ -180,17 +180,17 @@ fun FeedScreen(
                                 modifier = Modifier.clickable { onCreateMomentClick() },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = SparklePink, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = SparklePurple, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Sparkle Moment ✨", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
+                                Text("Campus Moment", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
                             }
                             Row(
                                 modifier = Modifier.clickable { onCreatePostClick() },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Lock, contentDescription = null, tint = SparkleOrange, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = SparkleMaroon, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Secret 🔒", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
+                                Text("Confidential", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
                             }
                         }
                     }
@@ -484,7 +484,7 @@ fun CampusPostCard(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Verified Student",
-                                tint = SparkleMint,
+                                tint = SparkleBlue,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -492,12 +492,12 @@ fun CampusPostCard(
                             Spacer(modifier = Modifier.width(6.dp))
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = SparklePink.copy(alpha = 0.15f)
+                                color = SparkleMaroon.copy(alpha = 0.12f)
                             ) {
                                 Text(
                                     text = "Confidential",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = SparklePink,
+                                        color = SparkleMaroon,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp
                                     ),
@@ -722,7 +722,7 @@ fun CampusPostCard(
                     Icon(
                         imageVector = if (post.isLikedByMe) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Like",
-                        tint = if (post.isLikedByMe) SparklePink else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (post.isLikedByMe) SparkleMaroon else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -730,7 +730,7 @@ fun CampusPostCard(
                         text = "${post.likesCount}",
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontWeight = if (post.isLikedByMe) FontWeight.Bold else FontWeight.Medium,
-                            color = if (post.isLikedByMe) SparklePink else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (post.isLikedByMe) SparkleMaroon else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                 }
@@ -746,7 +746,7 @@ fun CampusPostCard(
                     Icon(
                         imageVector = if (post.commentsDisabled) Icons.Outlined.CommentsDisabled else Icons.Outlined.ChatBubbleOutline,
                         contentDescription = "Comments",
-                        tint = if (post.commentsDisabled) SparkleOrange else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (post.commentsDisabled) SparkleMaroon else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -783,6 +783,18 @@ fun CampusPostCard(
                         modifier = Modifier.size(18.dp)
                     )
                 }
+            }
+
+            // Instagram-style clean likes summary
+            if (post.likesCount > 0) {
+                Text(
+                    text = if (post.likesCount == 1) "1 like" else "${post.likesCount} likes",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    modifier = Modifier.padding(start = 8.dp, top = 2.dp, bottom = 4.dp)
+                )
             }
 
             // Expandable Comments Section
